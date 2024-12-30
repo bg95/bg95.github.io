@@ -3,10 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ge Bai's Personal Homepage</title>
+    <title>Ge Bai's Homepage</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="sidebar">
+        <nav>
+            <ul>
+                <li><a href="#contact-bio">Contact Info</a></li>
+                <li><a href="#recruitment">News</a></li>
+                <li><a href="#bio">Bio</a></li>
+                <li><a href="#research">Research Highlights</a></li>
+            </ul>
+        </nav>
+    </div>
     <div class="container">
         <header>
             <h1>Dr. Ge Bai (柏舸)</h1>
@@ -26,21 +36,52 @@
                 <img src="photo.png" alt="Personal photo" class="profile-photo">
             </div>
         </section>
+        <section id="recruitment">
+            <h2>Now recruiting</h2>
+            <p>
+                I'm now recruiting PhD students, Master students, Research Assistants, Inters, Postdocs at Hong Kong University of Science and Technology (Guangzhou). Students and researchers with a solid mathematics and physics background and a strong interest in quantum information are welcome to join our research group to conduct research in quantum information at AI Thrust, Information Hub, HKUST(GZ).
+            </p>
+            <p>
+                <a href="https://zhuanlan.zhihu.com/p/15219589139">Click here for more details.</a> <a href="https://zhuanlan.zhihu.com/p/15219589139"> 柏舸课题组-量子信息全奖博士/硕士/RA/博后招聘，详情请点击此处。</a>
+            </p>
+        </section>
         <section id="bio">
             <h2>Personal Bio</h2>
             <p>
                 Ge Bai joins AI Thrust, Information Hub, Hong Kong University of Science and Technology (Guangzhou) in March 2025 as an assistant professor. His research focuses on quantum information, including quantum causal inference, quantum machine learning, quantum communication network theory, quantum benchmarking, quantum error correction, quantum information theory, etc. Before joining HKUST(GZ), he worked as a postdoctoral fellow at the Centre for Quantum Technologies in the National University of Singapore. He received his Ph.D. from the University of Hong Kong in 2021 and was awarded the Hong Kong Institution of Science Young Scientist Award. He has published nearly 20 papers in top journals in the field of quantum information such as Physical Review Letters, Nature Communications, IEEE Transactions on Information Theory, npj Quantum Information, Quantum, and has made many oral reports at conferences such as AQIS and Quantum Resources. He is a reviewer for many top journals and conferences such as Physical Review Letters, QIP, and AQIS.
             </p>
-        </section><!-- 
+        </section>
         <section id="research">
             <h2>Research Highlights</h2>
-            <article>
-                <h3>Title of Research Work</h3>
+            <div class="research">
+                <article class="research-title">
+                    <h3><a href="https://www.nature.com/articles/s41534-022-00578-4">Quantum Causal Unravelling</a></h3>
+                    <p>Ge Bai, Ya-Dong Wu, Yan Zhu, Masahito Hayashi, Giulio Chiribella</p>
+                </article>
+                <img src="figures/causal_unravelling.png"  class="research-photo">
+            </div>
+            <div>
                 <p>
-                    [Brief description]
+                        Complex processes often arise from sequences of simpler interactions involving a few particles at a time. These interactions, however, may not be directly accessible to experiments. Here we develop the first efficient method for unravelling the causal structure of the interactions in a multipartite quantum process, useful for identifying useful communication channels in quantum networks, and to test the internal structure of uncharacterized quantum circuits.
+                    </p>
+            <div>
+            <hr>
+
+            <div class="research">
+                <article class="research-title">
+                    <h3><a href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.120.150502">Test One to Test Many: A Unified Approach to Quantum Benchmarks</a></h3>
+                    <p>Ge Bai, Giulio Chiribella</p>
+                </article>
+                <img src="figures/benchmarks.png"  class="research-photo">
+            </div>
+            <div>
+                <p>    
+                    Quantum benchmarks are widely used for validating quantum information processing, but practical tests often use finite subsets of input states, leading to artificially higher benchmarks. We demonstrate a setup using one fixed entanglement source to indirectly probe the average fidelity of many states, rigorously validating various protocols.
                 </p>
-            </article>
-        </section> -->
+            <div>
+            <hr>
+
+        </section>
     </div>
 </body>
 </html>

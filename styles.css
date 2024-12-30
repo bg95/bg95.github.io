@@ -5,6 +5,41 @@ body {
     padding: 0;
     color: #333;
     background-color: #f9f9f9;
+    display: flex;
+    scroll-behavior: smooth; /* Enables smooth scrolling */
+}
+
+.sidebar {
+    width: 200px;
+    background-color: #333;
+    color: #fff;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding-left: 20px;
+    padding-top: 20px;
+    font-family: 'Helvetica Neue', sans-serif; /* Softer font */
+}
+
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar nav ul li {
+    margin: 20px 0;
+}
+
+.sidebar nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    display: block;
+    padding: 10px;
+}
+
+.sidebar nav ul li a:hover {
+    background-color: #575757;
 }
 
 .container {
@@ -14,6 +49,23 @@ body {
     background-color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     border-radius: 8px;
+}
+
+.research {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+}
+.research-title {
+    width: 40%;
+}
+.research-photo {
+    width: 60%;
+    height: 200px;
+    object-fit: contain;
 }
 
 header {
@@ -36,7 +88,7 @@ header p {
     align-items: center;
     padding: 1rem 2rem;
     margin: 1rem 0;
-    background-color: #e9f7ef;
+    background-color: #EAEFFF;
     border-radius: 8px;
 }
 
@@ -56,6 +108,15 @@ header p {
 
 #contact a:hover {
     text-decoration: underline;
+}
+
+#recruitment {
+    padding: 1rem 2rem;
+    margin: 1rem 0;
+    background-color: #fff3cd;
+    border-left: 5px solid #ffa500;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .profile-photo {
