@@ -477,13 +477,13 @@ function restore(json) {
 function normalizeNode(n) {
   const isS = n.type === 'stray';
   return {
-    id: n.id || genId(isS ? 's' : 'n'), name: n.name || (isS ? 'Stray' : 'T'), type: n.type || 'tensor', shape: n.shape || 'rect',
+    id: n.id || genId(isS ? 's' : 'n'), name: n.name || (isS ? '.terminal' : 'T'), type: n.type || 'tensor', shape: n.shape || 'rect',
     einsumName: n.einsumName || '', useEinsumName: !!n.useEinsumName,
-    drawCode: n.drawCode || '', x: snap(n.x || 200), y: snap(n.y || 200), w: clamp(n.w || (isS ? 80 : 100), 10, 2000), h: clamp(n.h || (isS ? 12 : 100), 10, 2000),
+    drawCode: n.drawCode || '', x: snap(n.x || 200), y: snap(n.y || 200), w: clamp(n.w || (isS ? 40 : 60), 10, 2000), h: clamp(n.h || (isS ? 10 : 60), 10, 2000),
     rotation: (n.rotation || 0) % 360, reflect: n.reflect === -1 ? -1 : 1,
     fillColor: n.fillColor || (isS ? '#e2e8f0' : '#ffffff'), fillOpacity: n.fillOpacity ?? 1,
     strokeColor: n.strokeColor || (isS ? '#64748b' : '#1e293b'), strokeWidth: n.strokeWidth ?? 2,
-    strokeDashed: !!n.strokeDashed, labelVisible: n.labelVisible ?? true,
+    strokeDashed: !!n.strokeDashed, labelVisible: n.labelVisible ?? (isS ? false : true),
     connectors: (n.connectors || []).map((c, i) => ({ id: c.id || genId('c'), lx: c.lx ?? 0, ly: c.ly ?? 0, ang: c.ang ?? 0, label: c.label || '?' }))
   };
 }
@@ -508,10 +508,10 @@ function addTensor(proto = null) {
   saveHistory();
   const n = normalizeNode(proto ? JSON.parse(JSON.stringify(proto)) : { 
     connectors: [
-      { lx: 0, ly: '(-h/2)', ang: -90, label: 'T' }, 
-      { lx: '(w/2)', ly: 0, ang: 0, label: 'R' }, 
       { lx: 0, ly: '(h/2)', ang: 90, label: 'B' }, 
-      { lx: '(-w/2)', ly: 0, ang: 180, label: 'L' }
+      { lx: '(-w/2)', ly: 0, ang: 180, label: 'L' },
+      { lx: '(w/2)', ly: 0, ang: 0, label: 'R' }, 
+      { lx: 0, ly: '(-h/2)', ang: -90, label: 'T' }
     ] 
   });
   if (proto) { 
