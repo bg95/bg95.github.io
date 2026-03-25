@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TensorNet Editor Pro - V4</title>
+  <title>TensorNet Editor</title>
   <style>
     :root {
       --bg: #f1f5f9;
@@ -207,6 +207,7 @@
       <div class="control">
         <label class="check"><input type="checkbox" id="toggle-node-labels" checked onchange="state.showNodeLabels=this.checked;render()"> Show tensor names</label>
         <label class="check"><input type="checkbox" id="toggle-conn-labels" checked onchange="state.showConnLabels=this.checked;render()"> Show connector labels</label>
+        <label class="check"><input type="checkbox" id="toggle-order-labels" checked onchange="state.showOrderLabels=this.checked;render()"> Show order labels</label>
         <label class="check"><input type="checkbox" id="toggle-labels-follow" onchange="state.labelsFollowNode=this.checked;render()"> Names follow node</label>
         <label class="check"><input type="checkbox" id="toggle-open-only" onchange="toggleOpenOnly()"> Hide connected</label>
       </div>
@@ -390,7 +391,7 @@
 
 <script>
 const state = {
-  nodes: [], edges: [], groups: [], templates: [], showNodeLabels: true, showConnLabels: true, labelsFollowNode: false, showOpenOnly: false, snap: true, gridSize: 20,
+  nodes: [], edges: [], groups: [], templates: [], showNodeLabels: true, showConnLabels: true, showOrderLabels: true, labelsFollowNode: false, showOpenOnly: false, snap: true, gridSize: 20,
   view: { x: 0, y: 0, scale: 1 }, selectedIds: [], selectedEdgeId: null, connectingFrom: null, 
   dragNodes: [], dragStart: [], marquee: { active: false, x1: 0, y1: 0, x2: 0, y2: 0 },
   panning: { active: false, x: 0, y: 0, sx: 0, sy: 0 }, history: { undo: [], redo: [], limit: 100 },
@@ -424,13 +425,13 @@ function evaluate(val, w, h) {
 }
 
 function saveHistory() {
-  const snapshot = JSON.stringify({ nodes: state.nodes, edges: state.edges, groups: state.groups, templates: state.templates, showNodeLabels: state.showNodeLabels, showConnLabels: state.showConnLabels, labelsFollowNode: state.labelsFollowNode, showOpenOnly: state.showOpenOnly, view: state.view, gridSize: state.gridSize });
+  const snapshot = JSON.stringify({ nodes: state.nodes, edges: state.edges, groups: state.groups, templates: state.templates, showNodeLabels: state.showNodeLabels, showConnLabels: state.showConnLabels, showOrderLabels: state.showOrderLabels, labelsFollowNode: state.labelsFollowNode, showOpenOnly: state.showOpenOnly, view: state.view, gridSize: state.gridSize });
   state.history.undo.push(snapshot);
   if (state.history.undo.length > state.history.limit) state.history.undo.shift();
   state.history.redo = [];
 }
-function undo() { if (state.history.undo.length) { state.history.redo.push(JSON.stringify({ nodes: state.nodes, edges: state.edges, groups: state.groups, templates: state.templates, showNodeLabels: state.showNodeLabels, showConnLabels: state.showConnLabels, labelsFollowNode: state.labelsFollowNode, showOpenOnly: state.showOpenOnly, view: state.view, gridSize: state.gridSize })); restore(state.history.undo.pop()); } }
-function redo() { if (state.history.redo.length) { state.history.undo.push(JSON.stringify({ nodes: state.nodes, edges: state.edges, groups: state.groups, templates: state.templates, showNodeLabels: state.showNodeLabels, showConnLabels: state.showConnLabels, labelsFollowNode: state.labelsFollowNode, showOpenOnly: state.showOpenOnly, view: state.view, gridSize: state.gridSize })); restore(state.history.redo.pop()); } }
+function undo() { if (state.history.undo.length) { state.history.redo.push(JSON.stringify({ nodes: state.nodes, edges: state.edges, groups: state.groups, templates: state.templates, showNodeLabels: state.showNodeLabels, showConnLabels: state.showConnLabels, showOrderLabels: state.showOrderLabels, labelsFollowNode: state.labelsFollowNode, showOpenOnly: state.showOpenOnly, view: state.view, gridSize: state.gridSize })); restore(state.history.undo.pop()); } }
+function redo() { if (state.history.redo.length) { state.history.undo.push(JSON.stringify({ nodes: state.nodes, edges: state.edges, groups: state.groups, templates: state.templates, showNodeLabels: state.showNodeLabels, showConnLabels: state.showConnLabels, showOrderLabels: state.showOrderLabels, labelsFollowNode: state.labelsFollowNode, showOpenOnly: state.showOpenOnly, view: state.view, gridSize: state.gridSize })); restore(state.history.redo.pop()); } }
 
 function restore(json) {
   try {
@@ -447,6 +448,7 @@ function restore(json) {
     if (d.showConnLabels !== undefined) state.showConnLabels = d.showConnLabels;
     else if (d.showLabels !== undefined) state.showConnLabels = d.showLabels;
 
+    state.showOrderLabels = d.showOrderLabels ?? true;
     if (d.labelsFollowNode !== undefined) state.labelsFollowNode = d.labelsFollowNode;
     if (d.showOpenOnly !== undefined) state.showOpenOnly = d.showOpenOnly;
     if (d.gridSize !== undefined) state.gridSize = d.gridSize;
@@ -554,6 +556,9 @@ function render(clearTemps = true) {
   if (clearTemps) layerTemps.innerHTML = '';
   layerEdges.innerHTML = ''; layerNodes.innerHTML = '';
   world.setAttribute('transform', `translate(${state.view.x},${state.view.y}) scale(${state.view.scale})`);
+
+  const onlySelected = state.selectedIds.length > 0;
+  const { openRoots, openSyms, rootToSym, findRoot: fr, parent: fp } = calculateEinsumData(state.nodes, state.edges, onlySelected);
 
   // Update grid pattern
   const gridPattern = document.getElementById('grid-pattern');
@@ -677,17 +682,40 @@ function render(clearTemps = true) {
         poly.style.cursor = 'grab';
       }
 
+      const root = fr(fp, fid);
+      const isOpen = openRoots.has(root);
+      const orderIdx = isOpen ? openSyms.indexOf(rootToSym[root]) : -1;
+
       if (state.showConnLabels && (!busy || !state.showOpenOnly)) {
         const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        const label_gap = 24;
+        const label_gap = 32;
         const r = ang * Math.PI / 180; 
         const tx = rx + Math.cos(r) * label_gap, ty = ly + Math.sin(r) * label_gap + 4;
         lbl.setAttribute('x', tx); lbl.setAttribute('y', ty);
         lbl.textContent = conn.label; lbl.classList.add('label', 'conn-label');
         lbl.setAttribute('data-conn-id', fid);
-        if (!state.labelsFollowNode) {
+        lbl.setAttribute('text-anchor', 'middle');
+        if (state.labelsFollowNode) {
+          inner.appendChild(lbl);
+        } else {
           lbl.setAttribute('transform', `rotate(${-n.rotation}, ${tx}, ${ty})`);
+          g.appendChild(lbl);
         }
+      }
+
+      if (state.showOrderLabels && orderIdx !== -1) {
+        const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        const label_gap = 60; // Increased gap
+        const r = ang * Math.PI / 180; 
+        const tx = rx + Math.cos(r) * label_gap, ty = ly + Math.sin(r) * label_gap + 4;
+        lbl.setAttribute('x', tx); lbl.setAttribute('y', ty);
+        lbl.textContent = orderIdx; lbl.classList.add('label', 'order-label');
+        lbl.setAttribute('data-conn-id', fid);
+        lbl.setAttribute('text-anchor', 'middle');
+        lbl.style.fill = 'var(--danger)';
+        lbl.style.fontWeight = 'bold';
+        // Order labels are global - always horizontal and unreflected
+        lbl.setAttribute('transform', `rotate(${-n.rotation}, ${tx}, ${ty})`);
         g.appendChild(lbl);
       }
     });
@@ -701,6 +729,7 @@ function updateUI() {
   document.getElementById('snap-grid').checked = state.snap;
   document.getElementById('toggle-node-labels').checked = state.showNodeLabels;
   document.getElementById('toggle-conn-labels').checked = state.showConnLabels;
+  document.getElementById('toggle-order-labels').checked = state.showOrderLabels;
   document.getElementById('toggle-labels-follow').checked = state.labelsFollowNode;
   document.getElementById('toggle-open-only').checked = state.showOpenOnly;
 
@@ -1057,7 +1086,7 @@ function handleMouseUp(e) {
   }
   state.dragNodes = [];
 }
-function exportEinsum(onlySelected = false) {
+function calculateEinsumData(nodes, edges, onlySelected = false) {
   function findRoot(parent, x) {
     if (parent[x] !== x) parent[x] = findRoot(parent, parent[x]);
     return parent[x];
@@ -1072,13 +1101,13 @@ function exportEinsum(onlySelected = false) {
   }
 
   const selectedSet = new Set(state.selectedIds);
-  const relevantNodes = onlySelected ? state.nodes.filter(n => selectedSet.has(n.id)) : state.nodes;
+  const relevantNodes = onlySelected ? nodes.filter(n => selectedSet.has(n.id)) : nodes;
   const relevantNodeIds = new Set(relevantNodes.map(n => n.id));
 
-  const relevantEdges = onlySelected ? state.edges.filter(e => {
+  const relevantEdges = onlySelected ? edges.filter(e => {
     const [n1, n2] = [e.from.split(':')[0], e.to.split(':')[0]];
     return relevantNodeIds.has(n1) && relevantNodeIds.has(n2);
-  }) : state.edges;
+  }) : edges;
 
   const parent = {}, rank = {};
   relevantNodes.forEach(n => {
@@ -1088,10 +1117,8 @@ function exportEinsum(onlySelected = false) {
     });
   });
 
-  // 1. Union by edges
   relevantEdges.forEach(e => { union(parent, rank, e.from, e.to); });
 
-  // 2. Union internally for stray nodes (they act as wires/junctions)
   relevantNodes.forEach(n => {
     if (n.type === 'stray' && n.connectors.length > 1) {
       for (let i = 1; i < n.connectors.length; i++) {
@@ -1100,69 +1127,76 @@ function exportEinsum(onlySelected = false) {
     }
   });
 
-  // 3. Assign symbols to roots based on appearance in tensors
+  // Identify open roots and their best labels for sorting
+  const openRoots = new Set();
+  const rootToBestLabel = {}; 
+  
+  relevantNodes.forEach(n => {
+    n.connectors.forEach(c => {
+      const fid = n.id + ':' + c.id;
+      const root = findRoot(parent, fid);
+      const isInternalBusy = relevantEdges.some(e => e.from === fid || e.to === fid);
+      
+      if (!(root in rootToBestLabel) || c.label < rootToBestLabel[root]) {
+        rootToBestLabel[root] = c.label;
+      }
+
+      if (!isInternalBusy) {
+        openRoots.add(root);
+      }
+    });
+  });
+
+  // Assign symbols to roots
   const rootToSym = {}, map = {};
   let idx = 0;
+
+  // First, assign symbols 0, 1, 2... to openRoots in lexicographical order of their labels
+  const sortedOpenRoots = Array.from(openRoots).sort((a, b) => {
+    const la = rootToBestLabel[a] || 'z';
+    const lb = rootToBestLabel[b] || 'z';
+    return la.localeCompare(lb);
+  });
+
+  const openSyms = [];
+  sortedOpenRoots.forEach(root => {
+    rootToSym[root] = idx++;
+    openSyms.push(rootToSym[root]);
+  });
+
+  // Then, assign subsequent symbols to remaining "internal" roots in order of appearance in tensors
   const tensors = relevantNodes.filter(n => n.type === 'tensor');
-  
   tensors.forEach(n => {
     n.connectors.forEach(c => {
       const fid = n.id + ':' + c.id;
       const root = findRoot(parent, fid);
-      if (!(root in rootToSym)) rootToSym[root] = idx++;
+      if (!(root in rootToSym)) {
+        rootToSym[root] = idx++;
+      }
       map[fid] = rootToSym[root];
     });
   });
 
-  // Also assign for strays just in case they have open legs
+  // Also assign for strays just in case
   relevantNodes.forEach(n => {
     if (n.type === 'stray') {
       n.connectors.forEach(c => {
         const fid = n.id + ':' + c.id;
         const root = findRoot(parent, fid);
-        if (!(root in rootToSym)) rootToSym[root] = idx++;
+        if (!(root in rootToSym)) {
+          rootToSym[root] = idx++;
+        }
         map[fid] = rootToSym[root];
       });
     }
   });
 
-  // 4. Identify open roots
-  const openRoots = new Set();
-  relevantNodes.forEach(n => {
-    n.connectors.forEach(c => {
-      const fid = n.id + ':' + c.id;
-      const isInternalBusy = relevantEdges.some(e => e.from === fid || e.to === fid);
-      if (!isInternalBusy) {
-        openRoots.add(findRoot(parent, fid));
-      }
-    });
-  });
+  return { map, openSyms, rootToSym, openRoots, parent, tensors, findRoot };
+}
 
-  // 5. Build output symbols in order of appearance
-  const openSyms = [];
-  const seenRoots = new Set();
-  tensors.forEach(n => {
-    n.connectors.forEach(c => {
-      const root = findRoot(parent, n.id + ':' + c.id);
-      if (openRoots.has(root) && !seenRoots.has(root)) {
-        openSyms.push(rootToSym[root]);
-        seenRoots.add(root);
-      }
-    });
-  });
-  // Remaining from strays
-  relevantNodes.forEach(n => {
-    if (n.type === 'stray') {
-      n.connectors.forEach(c => {
-        const root = findRoot(parent, n.id + ':' + c.id);
-        if (openRoots.has(root) && !seenRoots.has(root)) {
-          openSyms.push(rootToSym[root]);
-          seenRoots.add(root);
-        }
-      });
-    }
-  });
-
+function exportEinsum(onlySelected = false) {
+  const { map, openSyms, tensors } = calculateEinsumData(state.nodes, state.edges, onlySelected);
+  
   const parts = [];
   tensors.forEach(n => {
     const sublist = n.connectors.map(c => map[n.id + ':' + c.id]).join(',');
