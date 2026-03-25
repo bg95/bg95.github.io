@@ -115,7 +115,13 @@
     .label { font-size: 11px; font-weight: 700; user-select: none; pointer-events: none; text-anchor: middle; fill: #0f172a; cursor: default; }
 
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-    .modal { background: #fff; border-radius: 8px; width: 450px; max-width: 100%; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+    .modal { background: #fff; border-radius: 8px; width: 600px; max-width: 100%; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-height: 90vh; }
+    #modal-body { overflow-y: auto; flex: 1; padding-right: 8px; }
+    .manual-sec { margin-bottom: 16px; }
+    .manual-sec h4 { margin: 0 0 8px 0; color: var(--primary); font-size: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+    .manual-sec p, .manual-sec li { font-size: 0.8rem; line-height: 1.5; color: #475569; }
+    .manual-sec ul { padding-left: 20px; margin: 8px 0; }
+    .manual-sec code { background: #f1f5f9; padding: 2px 4px; border-radius: 3px; font-family: monospace; font-size: 0.75rem; }
     .modal-footer { margin-top: 15px; display: flex; justify-content: flex-end; gap: 8px; }
 
     #file-input { display: none; }
@@ -193,6 +199,7 @@
           <button class="btn-success" onclick="addTensor()">+ Tensor</button>
           <button class="btn-secondary" onclick="addStray()">+ Terminal</button>
         </div>
+        <button class="btn-accent" style="width:100%; margin-top:8px" onclick="showManual()">📖 User Manual</button>
       </div>
 
       <div class="control">
@@ -1207,6 +1214,66 @@ function exportEinsum(onlySelected = false) {
   const einsumStr = `einsum(${parts.join(', ')}, [${openSyms.join(',')}])`;
   showModal(onlySelected ? 'Einsum Selection' : 'Einsum All', `<pre id="einsum-code" style="white-space:pre-wrap; background:#eee; padding:10px">${einsumStr}</pre><div class="modal-footer"><button class="btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('einsum-code').textContent)">Copy to Clipboard</button></div>`);
 }
+function showManual() {
+  const manual = `
+    <div class="manual-sec">
+      <h4>1. Sidebar Overview</h4>
+      <p>The editor is divided into three main control areas:</p>
+      <ul>
+        <li><strong>Left Sidebar (Environment):</strong> Global canvas settings, object creation, display toggles, and template management.</li>
+        <li><strong>Right Sidebar (Properties):</strong> Context-sensitive panel. Shows transformation tools for selections or detailed editing fields for nodes/edges.</li>
+        <li><strong>Footer (Data I/O):</strong> Tools for saving/loading projects, Base64 export/import, and Einsum generation.</li>
+      </ul>
+    </div>
+
+    <div class="manual-sec">
+      <h4>2. Left Sidebar (Environment)</h4>
+      <ul>
+        <li><strong>Object Creation:</strong> Add standard <code>+ Tensors</code> (shapes with 4 default ports) or <code>+ Terminals</code> (stray bars used as wires/junctions).</li>
+        <li><strong>Grid Settings:</strong> Set <code>Grid Size</code> and toggle <code>Snap</code> to align objects precisely.</li>
+        <li><strong>Display Toggles:</strong> 
+          <ul>
+            <li><code>Show tensor names</code> / <code>Show connector labels</code>: Toggle text visibility.</li>
+            <li><code>Show order labels</code>: Toggle the red indices (0, 1, 2...) indicating Einsum output order.</li>
+            <li><code>Names follow node</code>: If enabled, labels will rotate and reflect with the tensor shape.</li>
+            <li><code>Hide connected</code>: Hides connector ports that are already occupied by an edge.</li>
+          </ul>
+        </li>
+        <li><strong>View:</strong> <code>Reset</code> the camera or <code>Fit All</code> to center all objects in the viewport.</li>
+        <li><strong>Templates:</strong> Select a group of nodes and click <code>Save Selected As Template</code> to reuse complex subnetworks later.</li>
+      </ul>
+    </div>
+
+    <div class="manual-sec">
+      <h4>3. Right Sidebar (Properties)</h4>
+      <ul>
+        <li><strong>Group Actions:</strong> Appears when multiple nodes are selected. Allows <code>Rotate 90°</code>, <code>Reflect</code>, <code>Duplicate</code>, or <code>Group/Ungroup</code> operations.</li>
+        <li><strong>Node Details:</strong> Appears when a single node is selected.
+          <ul>
+            <li><code>Name & Visibility</code>: Edit display name. Toggle <code>Use custom Einsum name</code> to use a different identifier for export (e.g., entries of a constant matrix).</li>
+            <li><code>Shape</code>: Choose from standard shapes or use <code>Custom Code</code>/<code>Custom Polygon</code>.</li>
+            <li><code>Size & Appearance</code>: Adjust dimensions, fill colors, and opacity.</li>
+            <li><code>Connectors</code>: Add/remove ports. Drag the <code>⋮⋮</code> handle to reorder ports (this affects lexicographical ordering if labels are identical).</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+
+    <div class="manual-sec">
+      <h4>4. Einsum Export Logic</h4>
+      <p>The editor generates <code>einsum()</code> strings based on the following rules:</p>
+      <ul>
+        <li><strong>Connected Tensors:</strong> Edges between connectors represent contracted indices. They are assigned internal numeric symbols automatically.</li>
+        <li><strong>Terminals (Stray Bars):</strong> Act as junctions. All connectors on a terminal share the same index.</li>
+        <li><strong>Open Connectors:</strong> Connectors that are unconnected (or connect outside of a selection) become the output indices of the Einsum function.</li>
+        <li><strong>Ordering:</strong> Open ports are sorted <strong>lexicographically</strong> by their <code>label</code>. The first label (e.g., "A1") gets index <code>0</code>, the next ("A2") gets <code>1</code>, and so on. These indices match the red <strong>Order Labels</strong> visible on the canvas.</li>
+        <li><strong>Selection Export:</strong> Using <code>Einsum Selected</code> only considers the subnetwork formed by selected tensors and edges between them. Ports connecting to unselected tensors are treated as "open".</li>
+      </ul>
+    </div>
+  `;
+  showModal('TensorNet Editor Manual', manual);
+}
+
 function showModal(t, b) { document.getElementById('modal-title').textContent = t; document.getElementById('modal-body').innerHTML = b; document.getElementById('overlay').style.display = 'flex'; }
 function closeOverlay() { document.getElementById('overlay').style.display = 'none'; }
 function showCustomHelp() { showModal('Help', `<p>Custom Polygon: String of points like "0,-50 50,50 -50,50"</p> <p>Custom Code Example:</p><code>return [\n {tag:'rect', x:-w/2, y:-h/2, width:w, height:h, fill:fillColor, stroke:strokeColor}\n];</code>`); }
