@@ -191,6 +191,7 @@
 <div id="app">
   <aside class="sidebar sidebar-left">
     <div class="scroll-content">
+      <button class="btn-accent" style="width:100%; margin-bottom:12px" onclick="showManual()">📖 User Manual</button>
       <h2>Environment</h2>
       
       <div class="control">
@@ -199,7 +200,6 @@
           <button class="btn-success" onclick="addTensor()">+ Tensor</button>
           <button class="btn-secondary" onclick="addStray()">+ Terminal</button>
         </div>
-        <button class="btn-accent" style="width:100%; margin-top:8px" onclick="showManual()">📖 User Manual</button>
       </div>
 
       <div class="control">
@@ -1217,57 +1217,59 @@ function exportEinsum(onlySelected = false) {
 function showManual() {
   const manual = `
     <div class="manual-sec">
-      <h4>1. Sidebar Overview</h4>
-      <p>The editor is divided into three main control areas:</p>
+      <h4>1. Project Purpose & Workflow</h4>
+      <p><strong>Purpose:</strong> This editor is designed to make <strong>Tensor Contractions</strong> visual and intuitive. Instead of dealing with complex index notation in code, you can build a network of tensors and their connections visually.</p>
+      <p><strong>Workflow:</strong></p>
+      <ol>
+        <li><strong>Create:</strong> Add tensors or terminals to the canvas.</li>
+        <li><strong>Connect:</strong> Drag from one connector port to another to create an edge (index contraction).</li>
+        <li><strong>Refine:</strong> Rotate, reflect, and label your tensors to match your mathematical model.</li>
+        <li><strong>Export:</strong> Generate a ready-to-use <code>einsum()</code> string for your Python/PyTorch/NumPy code.</li>
+      </ol>
+    </div>
+
+    <div class="manual-sec">
+      <h4>2. Basic Instructions</h4>
       <ul>
-        <li><strong>Left Sidebar (Environment):</strong> Global canvas settings, object creation, display toggles, and template management.</li>
-        <li><strong>Right Sidebar (Properties):</strong> Context-sensitive panel. Shows transformation tools for selections or detailed editing fields for nodes/edges.</li>
-        <li><strong>Footer (Data I/O):</strong> Tools for saving/loading projects, Base64 export/import, and Einsum generation.</li>
+        <li><strong>Adding Objects:</strong> Click <code>+ Tensor</code> for a standard node, <code>+ Terminal</code> for a junction bar, or click any saved <strong>Template</strong> to spawn it.</li>
+        <li><strong>Creating Edges:</strong> Drag from any connector to another. A dashed line shows the potential connection.</li>
+        <li><strong>Context Menu:</strong> <strong>Right-click</strong> anywhere on the canvas or on an object to see quick actions like Delete, Duplicate, or Edit.</li>
+        <li><strong>Selection:</strong> Click an object to select it. Use <code>Ctrl + Click</code> to multi-select, or drag on the empty canvas to marquee-select.</li>
       </ul>
     </div>
 
     <div class="manual-sec">
-      <h4>2. Left Sidebar (Environment)</h4>
+      <h4>3. Sidebar Regions & Buttons</h4>
+      <p><strong>Left Sidebar (Environment):</strong></p>
       <ul>
-        <li><strong>Object Creation:</strong> Add standard <code>+ Tensors</code> (shapes with 4 default ports) or <code>+ Terminals</code> (stray bars used as wires/junctions).</li>
-        <li><strong>Grid Settings:</strong> Set <code>Grid Size</code> and toggle <code>Snap</code> to align objects precisely.</li>
-        <li><strong>Display Toggles:</strong> 
-          <ul>
-            <li><code>Show tensor names</code> / <code>Show connector labels</code>: Toggle text visibility.</li>
-            <li><code>Show order labels</code>: Toggle the red indices (0, 1, 2...) indicating Einsum output order.</li>
-            <li><code>Names follow node</code>: If enabled, labels will rotate and reflect with the tensor shape.</li>
-            <li><code>Hide connected</code>: Hides connector ports that are already occupied by an edge.</li>
-          </ul>
-        </li>
-        <li><strong>View:</strong> <code>Reset</code> the camera or <code>Fit All</code> to center all objects in the viewport.</li>
-        <li><strong>Templates:</strong> Select a group of nodes and click <code>Save Selected As Template</code> to reuse complex subnetworks later.</li>
+        <li><code>Snap</code>: Align objects to the dot grid.</li>
+        <li><code>Display Toggles</code>: Show/hide names, connector labels, or order indices.</li>
+        <li><code>Names follow node</code>: Toggle whether labels rotate/reflect with the tensor.</li>
+        <li><code>Templates</code>: Save complex subnetworks to reuse them instantly.</li>
+      </ul>
+      <p><strong>Right Sidebar (Properties):</strong></p>
+      <ul>
+        <li><code>Group Actions</code>: Rotate, reflect, or duplicate multiple selected nodes.</li>
+        <li><code>Node Details</code>: Edit a tensor's name, shape (including <code>Custom Code</code>), and appearance.</li>
+        <li><strong>Important:</strong> Drag the <code>⋮⋮</code> handle in the <strong>Connectors</strong> list to reorder ports. The order in this list determines the order of indices in the <code>einsum</code> function for that specific tensor.</li>
       </ul>
     </div>
 
     <div class="manual-sec">
-      <h4>3. Right Sidebar (Properties)</h4>
+      <h4>4. Saving & Data I/O</h4>
       <ul>
-        <li><strong>Group Actions:</strong> Appears when multiple nodes are selected. Allows <code>Rotate 90°</code>, <code>Reflect</code>, <code>Duplicate</code>, or <code>Group/Ungroup</code> operations.</li>
-        <li><strong>Node Details:</strong> Appears when a single node is selected.
-          <ul>
-            <li><code>Name & Visibility</code>: Edit display name. Toggle <code>Use custom Einsum name</code> to use a different identifier for export (e.g., entries of a constant matrix).</li>
-            <li><code>Shape</code>: Choose from standard shapes or use <code>Custom Code</code>/<code>Custom Polygon</code>.</li>
-            <li><code>Size & Appearance</code>: Adjust dimensions, fill colors, and opacity.</li>
-            <li><code>Connectors</code>: Add/remove ports. Drag the <code>⋮⋮</code> handle to reorder ports (this affects lexicographical ordering if labels are identical).</li>
-          </ul>
-        </li>
+        <li><strong>Save All / Export B64 All:</strong> Saves the <strong>entire state</strong>, including all tensors, edges, groups, and your templates. Use this for full project backups.</li>
+        <li><strong>Save Config / Export B64 Config:</strong> Saves <strong>only</strong> the templates and global settings (grid size, toggles). Use this to transfer your custom library of shapes to a new project.</li>
+        <li><strong>Base64:</strong> These are text strings you can easily copy/paste to share your work without a file.</li>
       </ul>
     </div>
 
     <div class="manual-sec">
-      <h4>4. Einsum Export Logic</h4>
-      <p>The editor generates <code>einsum()</code> strings based on the following rules:</p>
+      <h4>5. Einsum Export Logic</h4>
       <ul>
-        <li><strong>Connected Tensors:</strong> Edges between connectors represent contracted indices. They are assigned internal numeric symbols automatically.</li>
-        <li><strong>Terminals (Stray Bars):</strong> Act as junctions. All connectors on a terminal share the same index.</li>
-        <li><strong>Open Connectors:</strong> Connectors that are unconnected (or connect outside of a selection) become the output indices of the Einsum function.</li>
-        <li><strong>Ordering:</strong> Open ports are sorted <strong>lexicographically</strong> by their <code>label</code>. The first label (e.g., "A1") gets index <code>0</code>, the next ("A2") gets <code>1</code>, and so on. These indices match the red <strong>Order Labels</strong> visible on the canvas.</li>
-        <li><strong>Selection Export:</strong> Using <code>Einsum Selected</code> only considers the subnetwork formed by selected tensors and edges between them. Ports connecting to unselected tensors are treated as "open".</li>
+        <li><strong>Contractions:</strong> Connected ports share an internal index.</li>
+        <li><strong>Open Ports:</strong> Unconnected ports become the <strong>output indices</strong>.</li>
+        <li><strong>Ordering:</strong> Output indices are sorted <strong>lexicographically</strong> by their port labels. The first label (e.g., "A") gets index <code>0</code>, the next gets <code>1</code>, etc. These match the red <strong>Order Labels</strong> on the canvas.</li>
       </ul>
     </div>
   `;
