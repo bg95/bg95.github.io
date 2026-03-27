@@ -322,6 +322,10 @@
               <input type="color" id="inp-fill" onchange="updateNode('fillColor', this.value)">
               <input type="number" id="inp-fill-op" step="0.1" min="0" max="1" oninput="updateNode('fillOpacity', parseFloat(this.value))">
             </div>
+            <div class="row" style="margin-top:4px">
+              <input type="number" id="inp-stroke-w" step="0.5" min="0" oninput="updateNode('strokeWidth', parseFloat(this.value))" title="Line Width">
+              <label class="check" style="font-size:10px; margin-left:8px;"><input type="checkbox" id="inp-stroke-dash" onchange="updateNode('strokeDashed', this.checked)"> Dashed</label>
+            </div>
           </div>
           <div class="control">
             <label>Connectors (Label | X | Y | °)</label>
@@ -607,8 +611,8 @@ function render(clearTemps = true) {
 
     if (n.shape === 'custom' && n.drawCode) {
       try {
-        const fn = new Function('w', 'h', 'fillColor', 'strokeColor', n.drawCode);
-        const res = fn(n.w, n.h, n.fillColor, n.strokeColor);
+        const fn = new Function('w', 'h', 'fillColor', 'strokeColor', 'strokeWidth', 'strokeDashed', n.drawCode);
+        const res = fn(n.w, n.h, n.fillColor, n.strokeColor, n.strokeWidth, n.strokeDashed);
         res.forEach(it => {
           const el = document.createElementNS('http://www.w3.org/2000/svg', it.tag || 'path');
           Object.entries(it).forEach(([k, v]) => { if (k !== 'tag') el.setAttribute(k === 'strokeWidth' ? 'stroke-width' : k, v); });
@@ -642,6 +646,7 @@ function render(clearTemps = true) {
         shape.setAttribute('points', evaluated);
       }
       shape.setAttribute('fill', n.fillColor); shape.setAttribute('fill-opacity', n.fillOpacity); shape.setAttribute('stroke', n.strokeColor); shape.setAttribute('stroke-width', n.strokeWidth);
+      if (n.strokeDashed) shape.setAttribute('stroke-dasharray', '5, 3');
       shape.setAttribute('data-nid', n.id);
       shape.classList.add(n.type === 'stray' ? 'stray-bar' : 'tensor-shape'); inner.appendChild(shape);
     }
@@ -664,8 +669,11 @@ function render(clearTemps = true) {
 
     if (n.labelVisible && state.showNodeLabels) {
       const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      txt.setAttribute('y', 5); txt.textContent = n.name; txt.classList.add('label', 'node-label');
+      txt.setAttribute('x', 0); txt.setAttribute('y', 0);
+      txt.textContent = n.name; txt.classList.add('label', 'node-label');
       txt.setAttribute('data-nid', n.id);
+      txt.setAttribute('text-anchor', 'middle');
+      txt.setAttribute('dominant-baseline', 'central');
       if (state.labelsFollowNode) {
         inner.appendChild(txt);
       } else {
@@ -696,32 +704,38 @@ function render(clearTemps = true) {
       if (state.showConnLabels && (!busy || !state.showOpenOnly)) {
         const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         const label_gap = 32;
-        const r = ang * Math.PI / 180; 
-        const tx = rx + Math.cos(r) * label_gap, ty = ly + Math.sin(r) * label_gap + 4;
-        lbl.setAttribute('x', tx); lbl.setAttribute('y', ty);
+        const r_val = ang_val * Math.PI / 180;
+        const tx_local = lx + Math.cos(r_val) * label_gap, ty_local = ly + Math.sin(r_val) * label_gap;
+        const r_global = ang * Math.PI / 180;
+        const tx_global = rx + Math.cos(r_global) * label_gap, ty_global = ly + Math.sin(r_global) * label_gap;
+
         lbl.textContent = conn.label; lbl.classList.add('label', 'conn-label');
         lbl.setAttribute('data-conn-id', fid);
         lbl.setAttribute('text-anchor', 'middle');
+        lbl.setAttribute('dominant-baseline', 'central');
+
         if (state.labelsFollowNode) {
+          lbl.setAttribute('x', tx_local); lbl.setAttribute('y', ty_local);
           inner.appendChild(lbl);
         } else {
-          lbl.setAttribute('transform', `rotate(${-n.rotation}, ${tx}, ${ty})`);
+          lbl.setAttribute('x', tx_global); lbl.setAttribute('y', ty_global);
+          lbl.setAttribute('transform', `rotate(${-n.rotation}, ${tx_global}, ${ty_global})`);
           g.appendChild(lbl);
         }
       }
 
       if (state.showOrderLabels && orderIdx !== -1) {
         const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        const label_gap = 60; // Increased gap
+        const label_gap = 60; 
         const r = ang * Math.PI / 180; 
-        const tx = rx + Math.cos(r) * label_gap, ty = ly + Math.sin(r) * label_gap + 4;
+        const tx = rx + Math.cos(r) * label_gap, ty = ly + Math.sin(r) * label_gap;
         lbl.setAttribute('x', tx); lbl.setAttribute('y', ty);
         lbl.textContent = orderIdx; lbl.classList.add('label', 'order-label');
         lbl.setAttribute('data-conn-id', fid);
         lbl.setAttribute('text-anchor', 'middle');
+        lbl.setAttribute('dominant-baseline', 'central');
         lbl.style.fill = 'var(--danger)';
         lbl.style.fontWeight = 'bold';
-        // Order labels are global - always horizontal and unreflected
         lbl.setAttribute('transform', `rotate(${-n.rotation}, ${tx}, ${ty})`);
         g.appendChild(lbl);
       }
@@ -759,12 +773,14 @@ function updateUI() {
     document.getElementById('inp-custom').value = n.drawCode;
     document.getElementById('inp-w').value = n.w; document.getElementById('inp-h').value = n.h;
     document.getElementById('inp-fill').value = n.fillColor; document.getElementById('inp-fill-op').value = n.fillOpacity;
+    document.getElementById('inp-stroke-w').value = n.strokeWidth; document.getElementById('inp-stroke-dash').checked = !!n.strokeDashed;
     const list = document.getElementById('conn-list'); list.innerHTML = '';
     n.connectors.forEach((c, i) => {
       const div = document.createElement('div'); div.className = 'conn-item';
       div.innerHTML = `
         <div class="conn-row">
           <div class="drag-handle" draggable="true" ondragstart="handleConnDragStart(event, ${i})" ondragover="event.preventDefault()" ondrop="handleConnDrop(event, ${i})">⋮⋮</div>
+          <span style="font-size:0.7rem; color:#64748b; width:10px; flex-shrink:0; margin-right:4px;">${i}</span>
           <input type="text" value="${c.label}" onchange="updateConn(${i},'label',this.value)" style="width:45px; flex-shrink:0;" title="Label">
           <input type="text" class="small-input" value="${c.lx}" onchange="updateConn(${i},'lx',this.value)" title="LX">
           <input type="text" class="small-input" value="${c.ly}" onchange="updateConn(${i},'ly',this.value)" title="LY">
@@ -1269,7 +1285,7 @@ function showManual() {
       <ul>
         <li><strong>Contractions:</strong> Connected ports share an internal index.</li>
         <li><strong>Open Ports:</strong> Unconnected ports become the <strong>output indices</strong>.</li>
-        <li><strong>Ordering:</strong> Output indices are sorted <strong>lexicographically</strong> by their port labels. The first label (e.g., "A") gets index <code>0</code>, the next gets <code>1</code>, etc. These match the red <strong>Order Labels</strong> on the canvas.</li>
+        <li><strong>Ordering:</strong> Output indices are sorted <strong>lexicographically</strong> by their port labels. The first label (e.g., "A") becomes index <code>0</code>, the next <code>1</code>, and so on. These indices match the <span style="color:red">red Order Labels</span> on the canvas. <strong>Caution:</strong> When only one tensor is selected, those labels show the output order of the exported einsum, not the tensor's internal index order. You can still rearrange the tensor's indices in the right-hand sidebar; the export will always reorder them lexicographically.</li>
       </ul>
     </div>
   `;
@@ -1278,7 +1294,7 @@ function showManual() {
 
 function showModal(t, b) { document.getElementById('modal-title').textContent = t; document.getElementById('modal-body').innerHTML = b; document.getElementById('overlay').style.display = 'flex'; }
 function closeOverlay() { document.getElementById('overlay').style.display = 'none'; }
-function showCustomHelp() { showModal('Help', `<p>Custom Polygon: String of points like "0,-50 50,50 -50,50"</p> <p>Custom Code Example:</p><code>return [\n {tag:'rect', x:-w/2, y:-h/2, width:w, height:h, fill:fillColor, stroke:strokeColor}\n];</code>`); }
+function showCustomHelp() { showModal('Help', `<p>Custom Polygon: String of points like "0,-50 50,50 -50,50"</p> <p>Custom Code Example:</p><code>return [\n {tag:'rect', x:-w/2, y:-h/2, width:w, height:h, fill:fillColor, stroke:strokeColor, strokeWidth:strokeWidth, strokeDasharray: strokeDashed ? "5 3" : "none"}\n];</code>`); }
 function resetView() { state.view = { x: 0, y: 0, scale: 1 }; render(); }
 function fitView() {
   if (!state.nodes.length) return;
