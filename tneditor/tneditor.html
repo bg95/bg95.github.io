@@ -127,9 +127,14 @@
     #file-input { display: none; }
     .small-input { width: 45px !important; padding: 4px !important; text-align: center; }
 
-    .edit-handle { fill: var(--primary); stroke: #fff; stroke-width: 2px; cursor: pointer; pointer-events: all; }
-    .edit-handle:hover { fill: var(--accent); }
+    .edit-handle { fill: var(--primary); stroke: #fff; stroke-width: 2px; cursor: pointer; pointer-events: all; transition: fill 0.1s; }
+    .edit-handle:hover, .edit-handle-edge:hover { fill: #facc15 !important; }
     .edit-handle.rot { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%232563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>') 12 12, auto; }
+    .edit-handle-edge { pointer-events: all; cursor: pointer; fill: transparent; transition: fill 0.1s; }
+    .nwse-resize { cursor: nwse-resize; }
+    .nesw-resize { cursor: nesw-resize; }
+    .ns-resize { cursor: ns-resize; }
+    .ew-resize { cursor: ew-resize; }
 
     /* Context Menu */
     .context-menu {
@@ -170,7 +175,7 @@
       font-size: 0.75rem;
       box-shadow: 0 2px 10px rgba(0,0,0,0.05);
       z-index: 5;
-      max-width: 300px;
+      max-width: 350px;
       pointer-events: none;
     }
     #shortcuts-info h4 { margin: 0 0 8px 0; font-size: 0.8rem; color: var(--primary); }
@@ -191,46 +196,48 @@
 <div id="app">
   <aside class="sidebar sidebar-left">
     <div class="scroll-content">
-      <button class="btn-accent" style="width:100%; margin-bottom:12px" onclick="showManual()">📖 User Manual</button>
+      <div style="display:flex; gap:8px; margin-bottom:12px">
+        <button class="btn-accent" style="flex:1; font-size:0.75rem; padding:6px" onclick="showManual()" title="Show the general user manual">📖 User Manual</button>
+      </div>
       <h2>Environment</h2>
       
       <div class="control">
         <label>Object Creation</label>
         <div class="btn-grid">
-          <button class="btn-success" onclick="addTensor()">+ Tensor</button>
-          <button class="btn-secondary" onclick="addStray()">+ Terminal</button>
+          <button class="btn-success" onclick="addTensor()" title="Add a new tensor with default connectors">+ Tensor</button>
+          <button class="btn-secondary" onclick="addStray()" title="Add a new terminal bar (wire junction)">+ Terminal</button>
         </div>
       </div>
 
       <div class="control">
         <div class="row">
-          <div><label>Grid Size</label><input type="number" id="grid-size" value="20" onchange="updateGridSettings()"></div>
+          <div><label>Grid Size</label><input type="number" id="grid-size" value="20" onchange="updateGridSettings()" title="Set the dot grid spacing (default 20)"></div>
           <div style="padding-top:18px">
-            <label class="check"><input type="checkbox" id="snap-grid" checked onchange="state.snap=this.checked"> Snap</label>
+            <label class="check"><input type="checkbox" id="snap-grid" checked onchange="state.snap=this.checked" title="Toggle snapping objects to the dot grid"> Snap</label>
           </div>
         </div>
       </div>
 
       <div class="control">
-        <label class="check"><input type="checkbox" id="toggle-node-labels" checked onchange="state.showNodeLabels=this.checked;render()"> Show tensor names</label>
-        <label class="check"><input type="checkbox" id="toggle-conn-labels" checked onchange="state.showConnLabels=this.checked;render()"> Show connector labels</label>
-        <label class="check"><input type="checkbox" id="toggle-order-labels" checked onchange="state.showOrderLabels=this.checked;render()"> Show order labels</label>
-        <label class="check"><input type="checkbox" id="toggle-labels-follow" onchange="state.labelsFollowNode=this.checked;render()"> Names follow node</label>
-        <label class="check"><input type="checkbox" id="toggle-open-only" onchange="toggleOpenOnly()"> Hide connected</label>
+        <label class="check"><input type="checkbox" id="toggle-node-labels" checked onchange="state.showNodeLabels=this.checked;render()" title="Toggle visibility of tensor names"> Show tensor names</label>
+        <label class="check"><input type="checkbox" id="toggle-conn-labels" checked onchange="state.showConnLabels=this.checked;render()" title="Toggle visibility of port labels (e.g. L, R, T, B)"> Show connector labels</label>
+        <label class="check"><input type="checkbox" id="toggle-order-labels" checked onchange="state.showOrderLabels=this.checked;render()" title="Toggle visibility of numeric indices (red) showing the einsum output order"> Show order labels</label>
+        <label class="check"><input type="checkbox" id="toggle-labels-follow" onchange="state.labelsFollowNode=this.checked;render()" title="If enabled, labels rotate and flip with the tensor shape"> Names follow node</label>
+        <label class="check"><input type="checkbox" id="toggle-open-only" onchange="toggleOpenOnly()" title="Hide connector ports that are already connected to an edge"> Hide connected</label>
       </div>
 
       <div class="control">
         <label>View</label>
         <div class="btn-grid">
-          <button class="btn-secondary" onclick="resetView()">Reset</button>
-          <button class="btn-secondary" onclick="fitView()">Fit All</button>
+          <button class="btn-secondary" onclick="resetView()" title="Reset zoom and pan to default">Reset</button>
+          <button class="btn-secondary" onclick="fitView()" title="Zoom and pan to fit all objects in view">Fit All</button>
         </div>
       </div>
 
       <h3>Templates</h3>
       <div class="control">
-        <input type="text" id="tpl-name" placeholder="Input name of new template..." style="margin-bottom:6px">
-        <button class="btn-accent" style="width:100%" onclick="saveTemplate()">Save Selected As Template</button>
+        <input type="text" id="tpl-name" placeholder="Input name of new template..." style="margin-bottom:6px" title="Name for the new template">
+        <button class="btn-accent" style="width:100%" onclick="saveTemplate()" title="Save currently selected nodes and edges as a reusable template">Save Selected As Template</button>
       </div>
       <div id="template-list"></div>
     </div>
@@ -263,16 +270,20 @@
       <div id="panel-selection" style="display:none">
         <h3>Group Actions</h3>
         <div class="btn-grid">
-          <button class="btn-accent" onclick="transformSelection('rotate')">Rotate 90° ↻</button>
-          <button class="btn-accent" onclick="transformSelection('reflect')">Reflect ↔</button>
+          <button class="btn-accent" onclick="transformSelection('rotate')" title="Rotate selection 90° clockwise">Rotate 90° ↻</button>
+          <button class="btn-accent" onclick="transformSelection('rotateCCW')" title="Rotate selection 90° counter-clockwise">Rotate -90° ↺</button>
         </div>
         <div class="btn-grid">
-          <button class="btn-accent" onclick="duplicateSelected()">Duplicate</button>
-          <button class="btn-danger" onclick="deleteSelected()">Delete</button>
+          <button class="btn-accent" onclick="transformSelection('reflect')" title="Reflect selection horizontally">Reflect ↔</button>
+          <button class="btn-accent" onclick="transformSelection('reflectV')" title="Reflect selection vertically">Reflect ↕</button>
         </div>
         <div class="btn-grid">
-          <button class="btn-secondary" onclick="groupSelected()">Group</button>
-          <button class="btn-secondary" onclick="ungroupSelected()">Ungroup</button>
+          <button class="btn-accent" onclick="duplicateSelected()" title="Duplicate selection (Ctrl+D)">Duplicate</button>
+          <button class="btn-danger" onclick="deleteSelected()" title="Delete selection (Del)">Delete</button>
+        </div>
+        <div class="btn-grid">
+          <button class="btn-secondary" onclick="groupSelected()" title="Group selected nodes (Ctrl+G)">Group</button>
+          <button class="btn-secondary" onclick="ungroupSelected()" title="Ungroup outermost selected group (Ctrl+Shift+G)">Ungroup</button>
         </div>
       </div>
 
@@ -281,21 +292,21 @@
         <div class="control">
           <label>Name & Visibility</label>
           <div class="row">
-            <input type="text" id="inp-name" oninput="updateNode('name', this.value)">
-            <label class="check" style="flex:0; margin-left:8px;"><input type="checkbox" id="inp-label-visible" onchange="updateNode('labelVisible', this.checked)"> Visible</label>
+            <input type="text" id="inp-name" oninput="updateNode('name', this.value)" title="The display name of this tensor">
+            <label class="check" style="flex:0; margin-left:8px;"><input type="checkbox" id="inp-label-visible" onchange="updateNode('labelVisible', this.checked)" title="Show/hide the name on the canvas"> Visible</label>
           </div>
           <div class="row" style="margin-top:4px">
-            <label class="check" style="font-size:10px"><input type="checkbox" id="inp-use-einsum-name" onchange="updateNode('useEinsumName', this.checked)"> Use custom Einsum name</label>
+            <label class="check" style="font-size:10px"><input type="checkbox" id="inp-use-einsum-name" onchange="updateNode('useEinsumName', this.checked)" title="Use a different name specifically for the exported einsum function"> Use custom Einsum name</label>
           </div>
           <div class="row">
-            <input type="text" id="inp-einsum-name" placeholder="Einsum name" oninput="updateNode('einsumName', this.value)">
+            <input type="text" id="inp-einsum-name" placeholder="Einsum name" oninput="updateNode('einsumName', this.value)" title="The name to use in the exported einsum code (e.g. 'A', 'B', 'M_1')">
           </div>
         </div>
         
         <div id="node-main-props">
           <div class="control">
             <label>Shape</label>
-            <select id="inp-shape" onchange="updateNode('shape', this.value)">
+            <select id="inp-shape" onchange="updateNode('shape', this.value)" title="Choose the visual representation of this tensor">
               <option value="rect">Rectangle</option>
               <option value="circle">Circle</option>
               <option value="triangle">Triangle</option>
@@ -306,38 +317,38 @@
           </div>
           <div id="custom-code-wrap" style="display:none" class="control">
              <label>Points / Function</label>
-             <textarea id="inp-custom" onchange="updateNode('drawCode', this.value)" style="height:100px; font-family: monospace; font-size:10px;"></textarea>
+             <textarea id="inp-custom" onchange="updateNode('drawCode', this.value)" style="height:100px; font-family: monospace; font-size:10px;" title="SVG points string or JavaScript drawing function"></textarea>
              <button class="btn-secondary" style="width:100%; margin:4px 0; font-size:10px" onclick="showCustomHelp()">Help & Examples</button>
           </div>
           <div class="control">
             <label>Size (W x H)</label>
             <div class="row">
-              <input type="number" id="inp-w" oninput="updateNode('w', parseFloat(this.value))">
-              <input type="number" id="inp-h" oninput="updateNode('h', parseFloat(this.value))">
+              <input type="number" id="inp-w" oninput="updateNode('w', parseFloat(this.value))" title="Width of the node">
+              <input type="number" id="inp-h" oninput="updateNode('h', parseFloat(this.value))" title="Height of the node">
             </div>
           </div>
           <div class="control">
             <label>Appearance</label>
             <div class="row">
-              <input type="color" id="inp-fill" onchange="updateNode('fillColor', this.value)">
-              <input type="number" id="inp-fill-op" step="0.1" min="0" max="1" oninput="updateNode('fillOpacity', parseFloat(this.value))">
+              <input type="color" id="inp-fill" onchange="updateNode('fillColor', this.value)" title="Fill color of the tensor shape">
+              <input type="number" id="inp-fill-op" step="0.1" min="0" max="1" oninput="updateNode('fillOpacity', parseFloat(this.value))" title="Opacity of the fill color (0.0 to 1.0)">
             </div>
             <div class="row" style="margin-top:4px">
-              <input type="number" id="inp-stroke-w" step="0.5" min="0" oninput="updateNode('strokeWidth', parseFloat(this.value))" title="Line Width">
-              <label class="check" style="font-size:10px; margin-left:8px;"><input type="checkbox" id="inp-stroke-dash" onchange="updateNode('strokeDashed', this.checked)"> Dashed</label>
+              <input type="number" id="inp-stroke-w" step="0.5" min="0" oninput="updateNode('strokeWidth', parseFloat(this.value))" title="Thickness of the border line">
+              <label class="check" style="font-size:10px; margin-left:8px;"><input type="checkbox" id="inp-stroke-dash" onchange="updateNode('strokeDashed', this.checked)" title="Make the border line dashed"> Dashed</label>
             </div>
           </div>
           <div class="control">
             <label>Connectors (Label | X | Y | °)</label>
             <div id="conn-list"></div>
-            <button class="btn-secondary" style="width:100%; margin-top:6px" onclick="addConnector()">+ New Connector</button>
+            <button class="btn-secondary" style="width:100%; margin-top:6px" onclick="addConnector()" title="Add a new connector port to this tensor">+ New Connector</button>
           </div>
         </div>
       </div>
 
       <div id="panel-edge" style="display:none">
         <h3>Edge</h3>
-        <button class="btn-danger" style="width:100%" onclick="deleteEdge()">Delete Edge</button>
+        <button class="btn-danger" style="width:100%" onclick="deleteEdge()" title="Remove the selected connection">Delete Edge</button>
       </div>
     </div>
 
@@ -345,24 +356,24 @@
     <div style="padding:12px; border-top:1px solid var(--border); background:#fff;">
       <div class="btn-grid" style="grid-template-columns: 1fr 1fr; margin-top:0">
         <div style="display:flex; flex-direction:column; gap:6px;">
-          <button class="btn-accent" onclick="triggerFileInput()">Load File</button>
-          <button class="btn-accent" onclick="importBase64()">Import B64</button>
-          <button class="btn-secondary" onclick="undo()">Undo</button>
+          <button class="btn-accent" onclick="triggerFileInput()" title="Load a project from a .json file">Load File</button>
+          <button class="btn-accent" onclick="importBase64()" title="Import project state from a Base64 string">Import B64</button>
+          <button class="btn-secondary" onclick="undo()" title="Undo last action (Ctrl+Z)">Undo</button>
         </div>
         <div style="display:flex; flex-direction:column; gap:6px;">
-          <button class="btn-primary" onclick="saveToFile('all')">Save All</button>
-          <button class="btn-primary" onclick="saveToFile('config')">Save Config</button>
-          <button class="btn-primary" onclick="exportBase64('all')">Export B64 All</button>
+          <button class="btn-primary" onclick="saveToFile('all')" title="Save entire project to a .json file">Save All</button>
+          <button class="btn-primary" onclick="saveToFile('config')" title="Save only templates and settings to a .json file">Save Config</button>
+          <button class="btn-primary" onclick="exportBase64('all')" title="Export entire project as a Base64 string">Export B64 All</button>
         </div>
       </div>
       <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px">
           <div class="btn-grid" style="margin:0">
-            <button class="btn-secondary" onclick="redo()">Redo</button>
-            <button class="btn-primary" onclick="exportBase64('config')">Export B64 Config</button>
+            <button class="btn-secondary" onclick="redo()" title="Redo last undone action (Ctrl+Y)">Redo</button>
+            <button class="btn-primary" onclick="exportBase64('config')" title="Export only templates and settings as a Base64 string">Export B64 Config</button>
           </div>
           <div class="btn-grid" style="margin:0">
-            <button class="btn-success" onclick="exportEinsum()">Einsum All</button>
-            <button id="btn-einsum-sel" class="btn-success" style="display:none" onclick="exportEinsum(true)">Einsum Selected</button>
+            <button class="btn-success" onclick="exportEinsum()" title="Generate einsum string for the entire network">Einsum All</button>
+            <button id="btn-einsum-sel" class="btn-success" style="display:none" onclick="exportEinsum(true)" title="Generate einsum string for selected nodes only">Einsum Selected</button>
           </div>
       </div>
     </div>
@@ -374,6 +385,8 @@
   <h4>Keyboard Shortcuts</h4>
   <ul>
     <li><span>Undo / Redo</span> <kbd>Ctrl + Z</kbd> / <kbd>Ctrl + Y</kbd></li>
+    <li><span>Copy / Paste</span> <kbd>Ctrl + C</kbd> / <kbd>Ctrl + V</kbd></li>
+    <li><span>Cut / Duplicate</span> <kbd>Ctrl + X</kbd> / <kbd>Ctrl + D</kbd></li>
     <li><span>Group / Ungroup</span> <kbd>Ctrl + G</kbd> / <kbd>Ctrl + Shift + G</kbd></li>
     <li><span>Rename selected</span> <kbd>F2</kbd> / <kbd>Dbl-Click</kbd></li>
     <li><span>Delete selected</span> <kbd>Del</kbd> / <kbd>Backspace</kbd></li>
@@ -405,8 +418,9 @@ const state = {
   nodes: [], edges: [], groups: [], templates: [], showNodeLabels: true, showConnLabels: true, showOrderLabels: true, labelsFollowNode: false, showOpenOnly: false, snap: true, gridSize: 20,
   view: { x: 0, y: 0, scale: 1 }, selectedIds: [], selectedEdgeId: null, connectingFrom: null, 
   dragNodes: [], dragStart: [], marquee: { active: false, x1: 0, y1: 0, x2: 0, y2: 0 },
+  clipboard: null,
   panning: { active: false, x: 0, y: 0, sx: 0, sy: 0 }, history: { undo: [], redo: [], limit: 100 },
-  editMode: { active: false, nodeId: null, handle: null, startX: 0, startY: 0, startW: 0, startH: 0, startRot: 0, startLX: 0, startLY: 0 }
+  editMode: { active: false, nodeId: null, handle: null, startX: 0, startY: 0, initialX: 0, initialY: 0, startW: 0, startH: 0, startRot: 0, startLX: 0, startLY: 0 }
 };
 
 const svg = document.getElementById('canvas'), world = document.getElementById('world'), canvasContainer = document.getElementById('canvas-container');
@@ -654,17 +668,37 @@ function render(clearTemps = true) {
     g.appendChild(inner);
 
     if (state.editMode.active && state.editMode.nodeId === n.id) {
-      const handles = [
-        { x: -n.w/2, y: -n.h/2, c: 'nwse-resize', h: 'nw' }, { x: n.w/2, y: -n.h/2, c: 'nesw-resize', h: 'ne' },
-        { x: n.w/2, y: n.h/2, c: 'nwse-resize', h: 'se' }, { x: -n.w/2, y: n.h/2, c: 'nesw-resize', h: 'sw' },
-        { x: 0, y: -n.h/2 - 20, c: 'rot', h: 'rot' }
+      // Edge handles (drawn first, behind corners)
+      const edges = [
+        { x: -n.w/2 - 4, y: -n.h/2, w: 8, h: n.h, c: 'ew-resize', h_id: 'w' },
+        { x: n.w/2 - 4, y: -n.h/2, w: 8, h: n.h, c: 'ew-resize', h_id: 'e' },
+        { x: -n.w/2, y: -n.h/2 - 4, w: n.w, h: 8, c: 'ns-resize', h_id: 'n' },
+        { x: -n.w/2, y: n.h/2 - 4, w: n.w, h: 8, c: 'ns-resize', h_id: 's' }
       ];
-      handles.forEach(p => {
+      edges.forEach(e => {
+        const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        r.setAttribute('x', e.x); r.setAttribute('y', e.y); r.setAttribute('width', e.w); r.setAttribute('height', e.h);
+        r.setAttribute('class', 'edit-handle-edge ' + e.c); r.setAttribute('data-handle', e.h_id);
+        inner.appendChild(r);
+      });
+
+      // Corner handles (drawn second, on top)
+      const corners = [
+        { x: -n.w/2, y: -n.h/2, c: 'nwse-resize', h: 'nw' }, { x: n.w/2, y: -n.h/2, c: 'nesw-resize', h: 'ne' },
+        { x: n.w/2, y: n.h/2, c: 'nwse-resize', h: 'se' }, { x: -n.w/2, y: n.h/2, c: 'nesw-resize', h: 'sw' }
+      ];
+      corners.forEach(p => {
         const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 6);
         c.setAttribute('class', 'edit-handle ' + p.c); c.setAttribute('data-handle', p.h);
         inner.appendChild(c);
       });
+
+      // Rotation handle
+      const rot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      rot.setAttribute('cx', 0); rot.setAttribute('cy', -n.h/2 - 20); rot.setAttribute('r', 6);
+      rot.setAttribute('class', 'edit-handle rot'); rot.setAttribute('data-handle', 'rot');
+      inner.appendChild(rot);
     }
 
     if (n.labelVisible && state.showNodeLabels) {
@@ -798,9 +832,9 @@ function updateUI() {
     let btnClass = t.isGroup ? 'btn-group-tpl' : (t.node?.type === 'stray' ? 'btn-stray-tpl' : 'btn-tensor-tpl');
     div.innerHTML = `
       <div class="drag-handle" draggable="true" ondragstart="handleTplDragStart(event, ${i})" ondragover="event.preventDefault()" ondrop="handleTplDrop(event, ${i})">⋮⋮</div>
-      <button class="${btnClass}" onclick="loadTemplate(${i})">${t.name}</button>
-      <button class="btn-secondary btn-x" onclick="renameTemplate(${i})" title="Rename">✎</button>
-      <button class="btn-danger btn-x" onclick="deleteTemplate(${i})" title="Delete">×</button>
+      <button class="${btnClass}" onclick="loadTemplate(${i})" title="Click to add a new '${t.name}' instance to the canvas">${t.name}</button>
+      <button class="btn-secondary btn-x" onclick="renameTemplate(${i})" title="Rename template">✎</button>
+      <button class="btn-danger btn-x" onclick="deleteTemplate(${i})" title="Delete template">×</button>
     `;
     tplList.appendChild(div);
   });
@@ -834,8 +868,19 @@ function transformSelection(mode) {
     if (mode === 'rotate') {
       const dx = n.x - cx, dy = n.y - cy;
       n.x = snap(cx - dy); n.y = snap(cy + dx); n.rotation = (n.rotation + 90) % 360;
-    } else {
+    } else if (mode === 'rotateCCW') {
+      const dx = n.x - cx, dy = n.y - cy;
+      n.x = snap(cx + dy); n.y = snap(cy - dx); n.rotation = (n.rotation + 270) % 360;
+    } else if (mode === 'reflect') {
       n.x = snap(2 * cx - n.x); n.reflect *= -1;
+    } else if (mode === 'reflectV') {
+      // Vertical reflection = Horizontal reflection + 180 degree rotation
+      // First reflect horizontally
+      n.x = snap(2 * cx - n.x); n.reflect *= -1;
+      // Then rotate 180 around selection center
+      const dx = n.x - cx, dy = n.y - cy;
+      n.x = snap(cx - dx); n.y = snap(cy - dy);
+      n.rotation = (n.rotation + 180) % 360;
     }
   });
   render();
@@ -844,19 +889,128 @@ function transformSelection(mode) {
 function deleteSelected() { saveHistory(); const set = new Set(state.selectedIds); state.nodes = state.nodes.filter(n => !set.has(n.id)); cleanup(); state.selectedIds = []; updateUI(); render(); }
 function deleteEdge() { if (state.selectedEdgeId) { saveHistory(); state.edges = state.edges.filter(e => e.id !== state.selectedEdgeId); state.selectedEdgeId = null; updateUI(); render(); } }
 
-function duplicateSelected() {
-  saveHistory(); const map = {}, newIds = [];
-  state.selectedIds.forEach(id => {
-    const o = findNode(id), n = normalizeNode(JSON.parse(JSON.stringify(o)));
-    n.id = genId('n'); n.x += 40; n.y += 40; n.connectors.forEach((c, i) => { map[id + ':' + o.connectors[i].id] = n.id + ':' + c.id; });
-    state.nodes.push(n); newIds.push(n.id);
+function copySelected() {
+  if (!state.selectedIds.length) return;
+  const nodes = state.selectedIds.map(findNode).map(n => JSON.parse(JSON.stringify(n)));
+  const set = new Set(state.selectedIds);
+  const edges = state.edges.filter(e => {
+    const [n1, n2] = [e.from.split(':')[0], e.to.split(':')[0]];
+    return set.has(n1) && set.has(n2);
+  }).map(e => JSON.parse(JSON.stringify(e)));
+  const groups = state.groups.filter(g => g.nodeIds.every(id => set.has(id))).map(g => JSON.parse(JSON.stringify(g)));
+  state.clipboard = { nodes, edges, groups };
+}
+
+function cutSelected() {
+  if (!state.selectedIds.length) return;
+  copySelected();
+  deleteSelected();
+}
+
+function paste() {
+  if (!state.clipboard) return;
+  saveHistory();
+  const { nodes, edges, groups } = JSON.parse(JSON.stringify(state.clipboard));
+  const idMap = {};
+  const newIds = [];
+  nodes.forEach(n => {
+    const oldId = n.id;
+    n.id = genId('n');
+    idMap[oldId] = n.id;
+    n.x += 40; n.y += 40;
+    n.connectors.forEach(c => {
+      const oldCid = c.id;
+      c.id = genId('c');
+      idMap[oldId + ':' + oldCid] = n.id + ':' + c.id;
+    });
+    state.nodes.push(n);
+    newIds.push(n.id);
   });
-  state.edges.filter(e => { const [n1, n2] = [e.from.split(':')[0], e.to.split(':')[0]]; return state.selectedIds.includes(n1) && state.selectedIds.includes(n2); }).forEach(e => state.edges.push({ id: genId('e'), from: map[e.from], to: map[e.to], style: e.style }));
-  if (newIds.length > 1) state.groups.push({ id: genId('g'), nodeIds: newIds });
+  edges.forEach(e => {
+    e.id = genId('e');
+    e.from = idMap[e.from];
+    e.to = idMap[e.to];
+    state.edges.push(e);
+  });
+  groups.forEach(g => {
+    g.id = genId('g');
+    g.nodeIds = g.nodeIds.map(id => idMap[id]);
+    state.groups.push(g);
+  });
   select(newIds);
 }
-function groupSelected() { if (state.selectedIds.length > 1) { saveHistory(); state.groups.push({ id: genId('g'), nodeIds: [...state.selectedIds] }); render(); } }
-function ungroupSelected() { saveHistory(); const set = new Set(state.selectedIds); state.groups = state.groups.filter(g => !g.nodeIds.some(id => set.has(id))); render(); }
+
+function duplicateSelected() {
+  const oldClipboard = state.clipboard;
+  copySelected();
+  paste();
+  state.clipboard = oldClipboard;
+}
+function groupSelected() {
+  if (state.selectedIds.length <= 1) return;
+  
+  const selectedSet = new Set(state.selectedIds);
+  
+  // 1. Check if a group with exactly these nodes already exists
+  const exists = state.groups.some(g => g.nodeIds.length === selectedSet.size && g.nodeIds.every(id => selectedSet.has(id)));
+  if (exists) {
+    alert("A group with these exact nodes already exists.");
+    return;
+  }
+
+  // 2. Check for partial overlaps with existing groups
+  // Rule: For any group G, G ∩ selectedSet must be either ∅, G, or selectedSet
+  for (const g of state.groups) {
+    const intersection = g.nodeIds.filter(id => selectedSet.has(id));
+    if (intersection.length > 0) {
+      const isSubsetOfNew = intersection.length === g.nodeIds.length;
+      const isSupersetOfNew = intersection.length === selectedSet.size;
+      
+      if (!isSubsetOfNew && !isSupersetOfNew) {
+        alert("Groups cannot partially overlap. A new group must either fully contain or be fully contained within existing groups.");
+        return;
+      }
+    }
+  }
+
+  saveHistory();
+  state.groups.push({ id: genId('g'), nodeIds: [...state.selectedIds] });
+  render();
+}
+
+function ungroupSelected() {
+  if (!state.selectedIds.length) return;
+  
+  const selectedSet = new Set(state.selectedIds);
+  // Find all groups that contain ALL of the selected nodes
+  const containers = state.groups.filter(g => selectedSet.has(g.nodeIds[0]) && g.nodeIds.every(id => selectedSet.has(id)));
+  
+  if (!containers.length) {
+    // If no group matches the exact selection, find groups that contain ANY of the selected nodes
+    const anyContainers = state.groups.filter(g => g.nodeIds.some(id => selectedSet.has(id)));
+    if (!anyContainers.length) return;
+    
+    // For each selected node, find its outermost container and remove it
+    saveHistory();
+    const groupsToRemove = new Set();
+    state.selectedIds.forEach(id => {
+      const nodeContainers = state.groups.filter(g => g.nodeIds.includes(id));
+      if (nodeContainers.length) {
+        // Outermost group has the most nodes
+        const outermost = nodeContainers.reduce((prev, curr) => (prev.nodeIds.length > curr.nodeIds.length) ? prev : curr);
+        groupsToRemove.add(outermost.id);
+      }
+    });
+    state.groups = state.groups.filter(g => !groupsToRemove.has(g.id));
+  } else {
+    // If we have groups matching the selection, remove the outermost one
+    saveHistory();
+    const outermost = containers.reduce((prev, curr) => (prev.nodeIds.length > curr.nodeIds.length) ? prev : curr);
+    state.groups = state.groups.filter(g => g.id !== outermost.id);
+  }
+  
+  render();
+}
 
 function handleConnDragStart(e, idx) { e.dataTransfer.setData('text/plain', idx); }
 function handleConnDrop(e, targetIdx) {
@@ -988,6 +1142,7 @@ function handleMouseDown(e) {
       saveHistory();
       state.editMode.handle = handle;
       state.editMode.startX = p.x; state.editMode.startY = p.y;
+      state.editMode.initialX = n.x; state.editMode.initialY = n.y;
       state.editMode.startW = n.w; state.editMode.startH = n.h;
       state.editMode.startRot = n.rotation;
       return;
@@ -1015,7 +1170,11 @@ function handleMouseDown(e) {
   }
   
   if (nid) {
-    const grp = state.groups.find(g => g.nodeIds.includes(nid)), members = grp ? grp.nodeIds : [nid];
+    // Select outermost group containing nid
+    const containers = state.groups.filter(g => g.nodeIds.includes(nid));
+    const outermost = containers.length ? containers.reduce((prev, curr) => (prev.nodeIds.length > curr.nodeIds.length) ? prev : curr) : null;
+    const members = outermost ? outermost.nodeIds : [nid];
+    
     if (e.shiftKey || e.ctrlKey) select(Array.from(new Set([...state.selectedIds, ...members])));
     else if (!state.selectedIds.includes(nid)) select(members);
     state.dragNodes = [...state.selectedIds]; state.dragStart = state.dragNodes.map(id => { const n = findNode(id); return { ox: p.x - n.x, oy: p.y - n.y }; }); return;
@@ -1049,19 +1208,63 @@ function handleMouseMove(e) {
       c.lx = `(w * ${(newLX / n.w).toFixed(3)})`;
       c.ly = `(h * ${(newLY / n.h).toFixed(3)})`;
     } else {
-      // Resize handles
-      const r = -n.rotation * Math.PI / 180;
-      const ldx = dx * Math.cos(r) - dy * Math.sin(r);
-      const ldy = dx * Math.sin(r) + dy * Math.cos(r);
+      // Resize logic
+      const h_id = state.editMode.handle;
+      const gr = n.rotation * Math.PI / 180;
+      const cosG = Math.cos(gr), sinG = Math.sin(gr);
       
-      let nw = state.editMode.startW, nh = state.editMode.startH;
-      if (state.editMode.handle.includes('e')) nw += ldx * 2;
-      if (state.editMode.handle.includes('w')) nw -= ldx * 2;
-      if (state.editMode.handle.includes('s')) nh += ldy * 2;
-      if (state.editMode.handle.includes('n')) nh -= ldy * 2;
+      // 1. Calculate the stationary point in world coordinates
+      // This is the point opposite to the handle being dragged.
+      let localStatX = 0, localStatY = 0;
+      if (h_id.includes('e')) localStatX = -state.editMode.startW / 2;
+      else if (h_id.includes('w')) localStatX = state.editMode.startW / 2;
+      if (h_id.includes('s')) localStatY = -state.editMode.startH / 2;
+      else if (h_id.includes('n')) localStatY = state.editMode.startH / 2;
       
-      n.w = Math.max(10, snap(nw));
-      n.h = Math.max(10, snap(nh));
+      const worldStatX = state.editMode.initialX + (localStatX * cosG - localStatY * sinG);
+      const worldStatY = state.editMode.initialY + (localStatX * sinG + localStatY * cosG);
+
+      // 2. Determine moving edge position in world coordinates (snapped)
+      const worldMoveX = state.snap ? Math.round(p.x / state.gridSize) * state.gridSize : p.x;
+      const worldMoveY = state.snap ? Math.round(p.y / state.gridSize) * state.gridSize : p.y;
+
+      if (e.ctrlKey) {
+        // Center-based: stationary point is the center
+        const r = -gr;
+        const ldx = (p.x - state.editMode.initialX) * Math.cos(r) - (p.y - state.editMode.initialY) * Math.sin(r);
+        const ldy = (p.x - state.editMode.initialX) * Math.sin(r) + (p.y - state.editMode.initialY) * Math.cos(r);
+        
+        let nw = state.editMode.startW, nh = state.editMode.startH;
+        if (h_id.includes('e')) nw = Math.abs(ldx) * 2;
+        if (h_id.includes('w')) nw = Math.abs(ldx) * 2;
+        if (h_id.includes('s')) nh = Math.abs(ldy) * 2;
+        if (h_id.includes('n')) nh = Math.abs(ldy) * 2;
+        
+        n.w = Math.max(10, state.snap ? Math.round(nw / state.gridSize) * state.gridSize : nw);
+        n.h = Math.max(10, state.snap ? Math.round(nh / state.gridSize) * state.gridSize : nh);
+        n.x = state.editMode.initialX;
+        n.y = state.editMode.initialY;
+      } else {
+        // Edge-based: stationary point is the opposite edge
+        // Project the mouse-stationary vector onto the local axes
+        const dx = worldMoveX - worldStatX;
+        const dy = worldMoveY - worldStatY;
+        
+        const localDX = dx * cosG + dy * sinG;
+        const localDY = -dx * sinG + dy * cosG;
+        
+        if (h_id.includes('e') || h_id.includes('w')) n.w = Math.max(10, Math.abs(localDX));
+        if (h_id.includes('s') || h_id.includes('n')) n.h = Math.max(10, Math.abs(localDY));
+        
+        // New center is midpoint between snapped moving edge and stationary point
+        // Note: we only update the dimension(s) corresponding to the handle
+        let newLocalCenterX = 0, newLocalCenterY = 0;
+        if (h_id.includes('e') || h_id.includes('w')) newLocalCenterX = localDX / 2;
+        if (h_id.includes('s') || h_id.includes('n')) newLocalCenterY = localDY / 2;
+        
+        n.x = worldStatX + (newLocalCenterX * cosG - newLocalCenterY * sinG);
+        n.y = worldStatY + (newLocalCenterX * sinG + newLocalCenterY * cosG);
+      }
     }
     updateUI();
     render();
@@ -1294,7 +1497,38 @@ function showManual() {
 
 function showModal(t, b) { document.getElementById('modal-title').textContent = t; document.getElementById('modal-body').innerHTML = b; document.getElementById('overlay').style.display = 'flex'; }
 function closeOverlay() { document.getElementById('overlay').style.display = 'none'; }
-function showCustomHelp() { showModal('Help', `<p>Custom Polygon: String of points like "0,-50 50,50 -50,50"</p> <p>Custom Code Example:</p><code>return [\n {tag:'rect', x:-w/2, y:-h/2, width:w, height:h, fill:fillColor, stroke:strokeColor, strokeWidth:strokeWidth, strokeDasharray: strokeDashed ? "5 3" : "none"}\n];</code>`); }
+function showCustomHelp() {
+  const content = `
+    <div class="manual-sec">
+      <h4>SVG Tag Reference</h4>
+      <ul>
+        <li><code>rect</code>: <code>x, y, width, height, rx</code></li>
+        <li><code>circle</code>: <code>cx, cy, r</code></li>
+        <li><code>ellipse</code>: <code>cx, cy, rx, ry</code></li>
+        <li><code>polygon</code> / <code>polyline</code>: <code>points</code> (e.g., "0,0 10,10")</li>
+        <li><code>path</code>: <code>d</code> (SVG path data)</li>
+        <li><code>line</code>: <code>x1, y1, x2, y2</code></li>
+      </ul>
+      <p style="font-size:0.7rem; color:var(--muted)">Common attributes: <code>fill, fill-opacity, stroke, stroke-width, stroke-dasharray</code>.</p>
+    </div>
+    <div class="manual-sec">
+      <h4>Referrable Variables</h4>
+      <ul>
+        <li><code>w, h</code>: Current width and height of the tensor.</li>
+        <li><code>fillColor, fillOpacity</code>: Colors chosen in the sidebar.</li>
+        <li><code>strokeColor, strokeWidth, strokeDashed</code>: Border properties.</li>
+      </ul>
+    </div>
+    <div class="manual-sec">
+      <h4>Examples</h4>
+      <p><strong>Custom Code:</strong></p>
+      <code>return [\n  {tag:'rect', x:-w/2, y:-h/2, width:w, height:h, fill:fillColor, stroke:strokeColor, strokeWidth:strokeWidth, strokeDasharray: strokeDashed ? "5 3" : "none"}\n];</code>
+      <p style="margin-top:8px"><strong>Custom Polygon:</strong></p>
+      <code>0,-h/2 w/2,h/2 -w/2,h/2</code>
+    </div>
+  `;
+  showModal('Custom Shape Help', content);
+}
 function resetView() { state.view = { x: 0, y: 0, scale: 1 }; render(); }
 function fitView() {
   if (!state.nodes.length) return;
@@ -1326,6 +1560,8 @@ svg.addEventListener('dblclick', handleDblClick, { capture: true });
 svg.addEventListener('wheel', e => { e.preventDefault(); const f = e.deltaY < 0 ? 1.1 : 0.9; const loc = getLocalPoint(e), p = screenToWorld(loc); state.view.scale = clamp(state.view.scale * f, 0.1, 10); const p2 = screenToWorld(loc); state.view.x += (p2.x - p.x) * state.view.scale; state.view.y += (p2.y - p.y) * state.view.scale; render(); }, { passive: false });
 
 window.addEventListener('keydown', e => {
+  if (e.target.matches('input, textarea')) return;
+
   if (e.key === 'F2' && state.selectedIds.length === 1) {
     e.preventDefault();
     const n = findNode(state.selectedIds[0]);
@@ -1337,8 +1573,12 @@ window.addEventListener('keydown', e => {
     if (e.key === 'G') { e.preventDefault(); ungroupSelected(); }
     if (e.key === 'z') { e.preventDefault(); undo(); }
     if (e.key === 'y' || (e.shiftKey && e.key === 'Z')) { e.preventDefault(); redo(); }
+    if (e.key === 'c') { e.preventDefault(); copySelected(); }
+    if (e.key === 'x') { e.preventDefault(); cutSelected(); }
+    if (e.key === 'v') { e.preventDefault(); paste(); }
+    if (e.key === 'd') { e.preventDefault(); duplicateSelected(); }
   }
-  if ((e.key === 'Delete' || e.key === 'Backspace') && !e.target.matches('input, textarea')) {
+  if ((e.key === 'Delete' || e.key === 'Backspace')) {
     if (state.selectedIds.length) deleteSelected();
     else if (state.selectedEdgeId) deleteEdge();
   }
@@ -1464,6 +1704,78 @@ function handleContextMenu(e) {
       }, true);
     }
   } else if (eid) {
+    const edge = state.edges.find(ed => ed.id === eid);
+    
+    addItem('Insert Terminal Here', () => {
+      if (!edge) return;
+      
+      // Save history before changes
+      saveHistory();
+      
+      // Get connector positions to determine left/right
+      const fromPos = getGlobalConnPos(edge.from);
+      const toPos = getGlobalConnPos(edge.to);
+      
+      if (!fromPos || !toPos) return;
+      
+      // Calculate world position from context menu event
+      const loc = getLocalPoint(e);
+      const worldPos = screenToWorld(loc);
+      
+      // Create stray node at cursor position
+      const n = normalizeNode({
+        type: 'stray',
+        x: worldPos.x,
+        y: worldPos.y,
+        connectors: [
+          { lx: '(-w/2)', ly: 0, ang: 180, label: '1' }, 
+          { lx: '(w/2)', ly: 0, ang: 0, label: '2' }
+        ]
+      });
+      state.nodes.push(n);
+      
+      // Determine which connector is on the left (smaller x)
+      const fromIsLeft = fromPos.pos.x <= toPos.pos.x;
+      
+      // Create new edges connecting through the terminal
+      // Left side connects to left connector (index 0), right to right (index 1)
+      if (fromIsLeft) {
+        state.edges.push({ 
+          id: genId('e'), 
+          from: edge.from, 
+          to: n.id + ':' + n.connectors[0].id, 
+          style: edge.style || 'bezier' 
+        });
+        state.edges.push({ 
+          id: genId('e'), 
+          from: edge.to, 
+          to: n.id + ':' + n.connectors[1].id, 
+          style: edge.style || 'bezier' 
+        });
+      } else {
+        state.edges.push({ 
+          id: genId('e'), 
+          from: edge.to, 
+          to: n.id + ':' + n.connectors[0].id, 
+          style: edge.style || 'bezier' 
+        });
+        state.edges.push({ 
+          id: genId('e'), 
+          from: edge.from, 
+          to: n.id + ':' + n.connectors[1].id, 
+          style: edge.style || 'bezier' 
+        });
+      }
+      
+      // Remove original edge
+      state.edges = state.edges.filter(ed => ed.id !== eid);
+      if (state.selectedEdgeId === eid) state.selectedEdgeId = null;
+      
+      render();
+      updateUI();
+    });
+    
+    addSep();
     addItem('Delete Edge', () => {
       saveHistory();
       state.edges = state.edges.filter(edge => edge.id !== eid);
