@@ -124,3 +124,28 @@
 .rotation-landmarks>span{padding:8px 12px;background:var(--lavender);border-radius:5px}
 @media(max-width:1100px){.pauli-demo{align-items:flex-start;flex-wrap:wrap}.syndrome-flow{flex-wrap:wrap}.syndrome-verdict{grid-template-columns:1fr auto}}
 @media(max-width:680px){.code-space-demo{padding:20px 0}.fixed-code-flow{gap:9px;flex-wrap:wrap;justify-content:center}.fixed-code-flow .formula{font-size:18px}.check-arrow{font-size:18px}.check-arrow b{font-size:28px}.code-space-result{font-size:12px;gap:8px}.pauli-demo{padding:17px;gap:17px}.pauli-demo .mini-label{font-size:10px}#pauli-action{gap:15px}.pauli-action-lines{font-size:20px}.sign-grid{grid-template-columns:55px repeat(9,42px);min-width:469px}.sign-cell{font-size:20px}.sign-row-label{font-size:12px}.sign-summary{font-size:13px}.syndrome-flow{gap:12px}.syndrome-flow .formula{font-size:20px}.syndrome-verdict>span{font-size:10px}.syndrome-verdict>strong{font-size:27px}.compatible-demo{padding:18px}.compatible-controls{gap:12px}.matrix-two{font-size:20px;gap:7px 12px;padding:7px 13px}.rotation-definition .formula{font-size:22px}}
+
+/* Compare components with the three-qubit code, beside its own error controls. */
+.rep-comparison-demo{margin:28px 0;padding:24px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.rep-comparison-demo h4{margin:0 0 16px}
+.rep-comparison-row{display:grid;grid-template-columns:minmax(170px,1.2fr) 2fr auto auto;align-items:center;gap:20px;padding:18px 0;border-bottom:1px solid var(--line)}
+.rep-component{font:calc(23px * var(--math-text-scale))/1.5 Cambria,Georgia,serif;overflow-wrap:anywhere}
+.rep-parity-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rep-parity-pair>div{padding:10px 12px;background:var(--lavender);border-radius:6px;text-align:center}
+.rep-parity-pair small,.rep-component-record small{display:block;font-size:calc(11px * var(--small-text-scale));color:var(--muted);white-space:nowrap}
+.rep-parity-pair span{font:calc(22px * var(--math-text-scale))/1.6 Cambria,Georgia,serif;white-space:nowrap}
+.rep-record-arrow{font-size:30px;color:var(--muted)}
+.rep-component-record{text-align:center}
+.rep-component-record>span{display:flex;gap:4px;margin-top:6px}
+.rep-shared-record{display:flex;align-items:center;gap:24px;margin-top:20px}
+.rep-shared-record .syndrome-display{font-size:30px;white-space:nowrap}
+.rep-shared-record p{font-size:calc(13px * var(--small-text-scale));margin:0}
+/* Pair bit checks under blocks A/B/C, then put phase checks on their own row. */
+@media(min-width:1251px){
+ #shor-syndrome-formulas{grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+ #shor-syndrome-formulas>.check-formula{min-width:0;padding:12px 9px}
+ #shor-syndrome-formulas>.check-formula:nth-child(n+7){grid-column:span 3}
+ #shor-syndrome-formulas .check-outcome span{font-size:21px;white-space:nowrap}
+}
+@media(max-width:1100px){.rep-comparison-row{grid-template-columns:1fr auto;gap:12px}.rep-component{grid-column:1/-1}.rep-record-arrow{display:none}.rep-shared-record{align-items:flex-start;flex-direction:column;gap:12px}}
+@media(max-width:680px){.rep-comparison-demo{padding:20px 0}.rep-comparison-row{gap:12px}.rep-component{font-size:22px}.rep-parity-pair{gap:8px}.rep-parity-pair>div{padding:8px}.rep-parity-pair small,.rep-component-record small{font-size:11px}.rep-parity-pair span{font-size:20px}.rep-shared-record .syndrome-display{font-size:27px}.rep-shared-record p{font-size:13px}}
