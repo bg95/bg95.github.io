@@ -10,6 +10,8 @@
   const pauliLabel=e=>Array.from(e).map((p,i)=>p==='I'?'':p+sub[i+1]).join('')||'I';
   const opLabel=ops=>ops.length?ops.map(([p,q])=>p+sub[q]).join(' then '):'I (no operation)';
   const synHtml=s=>s.map(v=>`<span class="syn-bit${v?' fail':''}">${v}</span>`).join('');
+  const nextPauli=p=>'IXYZ'[('IXYZ'.indexOf(p)+1)%4];
+  const cyclePauliAt=(error,i)=>error.slice(0,i)+nextPauli(error[i])+error.slice(i+1);
   const feedback=(id,text,type='')=>{$(id).className=`feedback ${type}`;$(id).innerHTML=text;};
   const selectButtons=(selector,attribute,value)=>$$(selector).forEach(b=>{const yes=b.dataset[attribute]===String(value);b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',yes);});
   let completed=new Set();
@@ -54,6 +56,12 @@
 
   // 02 — numeric encoding; five-wire circuit with an inspectable state after every operation.
   let qStep=2,repError='III',cycleStep=9,repAction='',dataSample=null;
+  function repetitionLogicalEffect(error,correction){
+    const flips=[...error].map(p=>Number(p==='X'||p==='Y'));
+    if(correction)flips[correction-1]^=1;
+    const phase=[...error].filter(p=>p==='Y'||p==='Z').length%2;
+    return flips[0]?(phase?'Y':'X'):(phase?'Z':'I');
+  }
   const cycleNames=['Prepare data and ancillas','CNOT q₁ → q₂','CNOT q₁ → q₃','Apply the chosen data error','CNOT q₁ → a₁','CNOT q₂ → a₁','CNOT q₂ → a₂','CNOT q₃ → a₂','Measure ancilla a₁','Measure ancilla a₂','Apply the syndrome-based correction'];
   function renderQuantum(){
     const {p,phi}=showParams('q'),stages=QEC.repetition(p,phi),input=logicalFormula(p,phi);
@@ -71,8 +79,8 @@
     $('rep-syndrome').innerHTML=`<span class="syndrome-small-label">syndrome = </span>(${syn.join(', ')})`;
     $('rep-explanation').innerHTML=repError==='ZII'?'The parity checks miss the phase flip. Both basis strings still have equal neighbors, even though their relative phase changed.':repError==='XXX'?'All comparisons pass even though the logical amplitudes exchanged places. A logical error can hide inside the code space.':`Both coherent components produce (${syn.join(', ')}). Reading only this record does not distinguish them.`;
     renderCycle(cycle,input);
-    const fixed=correctQ?QEC.gate(damaged,3,correctQ,'X'):damaged,okay=['III','IXI'].includes(repError),effect=repError==='ZII'?'phase flip Z':'bit flip X';
-    feedback('rep-result',`<strong>${repAction==='recover'?'Correction applied':'Decoder’s correction'}: ${correctQ?'X'+sub[correctQ]:'I'}</strong>. ${okay?'It restores the original encoded message for every input.':`A logical ${effect} remains; this error lies outside the bit-flip-only guarantee.`}<br>Recovered data ≈ <span class="formula">${stateFormula(fixed,3)}</span><br>Fidelity for this input: <strong>${pct(QEC.fidelity(stages[2],fixed))}</strong>.`,okay?'success':'warning');
+    const fixed=correctQ?QEC.gate(damaged,3,correctQ,'X'):damaged,logicalEffect=repetitionLogicalEffect(repError,correctQ),okay=logicalEffect==='I',effect={X:'bit flip X',Y:'combined bit/phase flip Y',Z:'phase flip Z'}[logicalEffect];
+    feedback('rep-result',`<strong>${repAction==='recover'?'Correction applied':'Decoder’s correction'}: ${correctQ?'X'+sub[correctQ]:'I'}</strong>. ${okay?'It restores the original encoded message for every input.':`A logical ${effect} remains; this error lies outside the single-bit-flip guarantee.`}<br>Recovered data ≈ <span class="formula">${stateFormula(fixed,3)}</span><br>Fidelity for this input: <strong>${pct(QEC.fidelity(stages[2],fixed))}</strong>.`,okay?'success':'warning');
     $('measurement-contrast').innerHTML=`<div class="contrast-grid"><div><span class="mini-label">PARITY ANCILLAS · MESSAGE PRESERVED</span><div class="formula">${stateFormula(damaged,3)}</div><p>Record (${syn.join(', ')}) with probability 100% for this chosen fixed Pauli error. The relative amplitudes remain coherent.</p></div><div><span class="mini-label">READ q₁ DIRECTLY · ONE COMPONENT SURVIVES</span>${terms.map(t=>`<div class="formula">${ket(t.basis)} <small>with probability ${pct(t.prob)}</small></div>`).join('')}<p>${p>0&&p<1?'Each outcome is a product state. The original logical coherence and the entanglement between the data qubits are lost.':'This input is already a basis state; there is no initial superposition or data entanglement to lose.'}</p></div></div>`;
     $('data-measurement-result').innerHTML=dataSample?`<div class="feedback warning">On a fresh preparation, directly reading q₁ gave <strong>${dataSample.basis[0]}</strong>. Conditional data state: <span class="formula">${ket(dataSample.basis)}</span>, up to global phase. The circuit above continues to show the parity-measurement route for comparison.</div>`:'';
   }
@@ -82,7 +90,7 @@
     svg+=txt(200,51,'ENCODE','font-size="11" text-anchor="middle"')+txt(345,51,'ERROR','font-size="11" text-anchor="middle"')+txt(560,51,'EXTRACT PARITIES','font-size="11" text-anchor="middle"')+txt(845,51,'MEASURE ANCILLAS','font-size="11" text-anchor="middle"')+txt(1115,51,'CORRECT','font-size="11" text-anchor="middle"');
     ys.forEach((y,i)=>svg+=wire(y,i<3?1200:i===3?768:858,85)+txt(12,y+5,i<3?`q${sub[i+1]}`:`a${sub[i-2]}: |0⟩`,'font-size="12"'));
     svg+=cx(155,ys[0],ys[1],cycleStep>=1)+cx(245,ys[0],ys[2],cycleStep>=2);
-    [...repError].forEach((p,i)=>{if(p!=='I')svg+=box(335,ys[i],p,cycleStep>=3);});if(repError==='III')svg+=box(335,ys[0],'I',cycleStep>=3);
+    [...repError].forEach((p,i)=>svg+=`<g class="editable-error-gate" role="button" tabindex="0" data-rep-error-qubit="${i}" aria-label="Error on data qubit ${i+1}: ${p}. Click to change to ${nextPauli(p)}">${box(335,ys[i],p,true,38)}</g>`);
     [[425,0,3,4],[515,1,3,5],[605,1,4,6],[695,2,4,7]].forEach(([x,c,t,step])=>svg+=cx(x,ys[c],ys[t],cycleStep>=step));
     svg+=box(785,ys[3],'MZ',cycleStep>=8,34)+box(875,ys[4],'MZ',cycleStep>=9,34);
     svg+=txt(840,ys[3]-22,`s₁ = ${cycle.syn[0]}${cycleStep<8?' (expected)':''}`,'font-size="11" text-anchor="middle"')+txt(905,ys[4]+27,`s₂ = ${cycle.syn[1]}${cycleStep<9?' (expected)':''}`,'font-size="11" text-anchor="middle"');
@@ -98,16 +106,18 @@
     const expression=measured?numericSum(stateTerms(cycle.stages[cycleStep],5).map(t=>({...t,label:`${ket(t.basis.slice(0,3))}<sub>d</sub>${measured===1?`${ket(t.basis.slice(4))}<sub>a₂</sub>`:''}`}))):stateFormula(cycle.stages[cycleStep],5,3);
     $('cycle-state').innerHTML=`<span class="mini-label">t${cycleStep} · ${cycleNames[cycleStep]}</span><div class="formula">${expression}</div>${measured?`<p><strong>Classical record:</strong> s₁ = ${cycle.syn[0]}${measured===2?`, s₂ = ${cycle.syn[1]}`:''}</p>`:''}<p>${notes[cycleStep]}</p>`;
     bindMarkers('Correction',i=>{cycleStep=i;repAction=i===10?'recover':'';mark('quantum');renderQuantum();});
+    $$('[data-rep-error-qubit]').forEach(el=>{const act=()=>{const i=+el.dataset.repErrorQubit;repError=cyclePauliAt(repError,i);repAction=cycleStep===10?'recover':'';dataSample=null;mark('quantum');renderQuantum();document.querySelector(`[data-rep-error-qubit="${i}"]`).focus({preventScroll:true});};el.onclick=act;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act();}};});
   }
   $$('[data-step]').forEach(b=>b.onclick=()=>{qStep=+b.dataset.step;mark('quantum');renderQuantum();});
   ['q-prob','q-phase'].forEach(id=>$(id).oninput=()=>{repAction='';dataSample=null;mark('quantum');renderQuantum();});
-  $$('[data-error]').forEach(b=>b.onclick=()=>{repError=b.dataset.error;repAction='';dataSample=null;mark('quantum');renderQuantum();});
+  $$('[data-error]').forEach(b=>b.onclick=()=>{repError=b.dataset.error;repAction=cycleStep===10?'recover':'';dataSample=null;mark('quantum');renderQuantum();});
   $('rep-recover').onclick=()=>{repAction='recover';cycleStep=10;mark('quantum');renderQuantum();};
   $('rep-measure-data').onclick=()=>{const {p,phi}=params('q'),terms=stateTerms(QEC.pauli(QEC.repetition(p,phi)[2],3,repError),3);dataSample=Math.random()<terms[0].prob?terms[0]:terms[terms.length-1];mark('quantum');renderQuantum();};
   $('quantum-reset').onclick=()=>{$('q-prob').value=50;$('q-phase').value=0;qStep=2;cycleStep=9;repError='III';repAction='';dataSample=null;renderQuantum();};renderQuantum();
 
   // 03 — Shor encoding, explicit check formulas, and an always-visible recovery.
-  let shorTime=5,brush='X',error='IIIIXIIII',recoveryStep=0;
+  let shorTime=5,error='IIIIXIIII',recoveryStep=0;
+  function cycleShorError(i){error=cyclePauliAt(error,i);mark('shor');renderShor();}
   function renderShorCircuit(){
     const {p,phi}=showParams('shor'),input=logicalFormula(p,phi),stages=QEC.shorLayers(p,phi);
     selectButtons('#shor-stages button','stage',shorTime<=2?1:shorTime===3?2:3);
@@ -117,11 +127,11 @@
     svg+=cx(200,ys[0],ys[3],shorTime>=1)+cx(325,ys[0],ys[6],shorTime>=2);
     [0,3,6].forEach(i=>svg+=box(450,ys[i],'H',shorTime>=3));
     [0,3,6].forEach(i=>svg+=cx(575,ys[i],ys[i+1],shorTime>=4)+cx(700,ys[i],ys[i+2],shorTime>=5));
-    svg+=txt(265,51,'REPEAT REPRESENTATIVES','text-anchor="middle" font-size="11"')+txt(450,51,'CHANGE BASIS','text-anchor="middle" font-size="11"')+txt(670,51,'REPEAT WITHIN BLOCKS','text-anchor="middle" font-size="11"');
+    svg+=txt(265,51,'OUTER: REPEAT','text-anchor="middle" font-size="11"')+txt(450,51,'OUTER: H','text-anchor="middle" font-size="11"')+txt(670,51,'INNER: REPEAT BITS','text-anchor="middle" font-size="11"');
     [0,1,2].forEach(b=>svg+=`<path d="M 840 ${ys[3*b]-12} h 9 v 96 h -9" fill="none" stroke="#aeb1c3"/>`+txt(866,ys[3*b]+40,'ABC'[b]));
     [130,265,390,515,640,790].forEach((x,i)=>svg+=marker(x,65,428,i,shorTime,'Shor'));$('shor-circuit').innerHTML=svg;
-    const captions=['Initial nine-qubit register','After CNOT 1 → 4','After CNOT 1 → 7','After H on representatives 1, 4, 7','After CNOTs 1 → 2, 4 → 5, 7 → 8','After CNOTs 1 → 3, 4 → 6, 7 → 9'];
-    $('shor-stage-description').innerHTML=`<strong>t${shorTime}: ${captions[shorTime]}</strong><div class="formula full-state">${stateFormula(stages[shorTime],9)}</div>${shorTime===5?`<p>Equivalently, |ψ<sub>L</sub>⟩ ≈ <span class="formula">${logicalFormula(p,phi,'|B₊B₊B₊⟩','|B₋B₋B₋⟩')}</span></p>`:''}`;
+    const captions=['Initial nine-qubit register','Outer code: CNOT 1 → 4','Outer code: CNOT 1 → 7','Outer phase code complete: H on representatives 1, 4, 7','Inner codes: CNOTs 1 → 2, 4 → 5, 7 → 8','Inner codes complete: CNOTs 1 → 3, 4 → 6, 7 → 9'];
+    $('shor-stage-description').innerHTML=`<strong>t${shorTime}: ${captions[shorTime]}</strong>${shorTime===3?'<p>On representatives (q₁, q₄, q₇), the state is α|+++⟩ + β|−−−⟩. The other six qubits are still |0⟩. Next, each representative is encoded into its inner bit-repetition block.</p>':''}<div class="formula full-state">${stateFormula(stages[shorTime],9)}</div>${shorTime===5?`<p>Equivalently, |ψ<sub>L</sub>⟩ ≈ <span class="formula">${logicalFormula(p,phi,'|B₊B₊B₊⟩','|B₋B₋B₋⟩')}</span></p>`:''}`;
     bindMarkers('Shor',i=>{shorTime=i;mark('shor');renderShorCircuit();});
   }
   $$('[data-stage]').forEach(b=>b.onclick=()=>{shorTime={1:2,2:3,3:5}[b.dataset.stage];mark('shor');renderShorCircuit();});
@@ -134,7 +144,7 @@
     const panel=$('shor-recovery');
     panel.className=`recovery-panel${recoveryStep===2&&a.effect!=='I'?' warning':''}`;
     let svg='',ys=Array.from({length:9},(_,i)=>68+i*35);
-    ys.forEach((y,i)=>svg+=wire(y,615,76)+txt(18,y+5,`q${sub[i+1]}`));
+    ys.forEach((y,i)=>svg+=wire(y,615,96)+`<g class="circuit-error-qubit" role="button" tabindex="0" data-recovery-qubit="${i}" data-p="${error[i]}" aria-label="Shor qubit ${i+1}: ${error[i]}. Click to change to ${nextPauli(error[i])}"><circle class="gate" cx="34" cy="${y}" r="16"/>${txt(34,y+5,error[i],'text-anchor="middle" font-size="13"')}${txt(62,y+5,`q${sub[i+1]}`,'font-size="12"')}</g>`);
     svg+=txt(210,25,'BIT CORRECTION','text-anchor="middle" font-size="12"')+txt(440,25,'PHASE CORRECTION','text-anchor="middle" font-size="12"');
     [[210,bitOps,1],[440,phaseOps,2]].forEach(([x,ops,step])=>{
       ops.forEach(([gate,q])=>svg+=box(x,ys[q-1],gate,recoveryStep>=step,38));
@@ -143,10 +153,11 @@
     [115,325,565].forEach((x,i)=>svg+=marker(x,47,389,i,recoveryStep,'Recovery'));
     const status=recoveryStep===0?'Before correction':recoveryStep===1?'After the bit correction':'After both corrections';
     const verdict=a.effect==='I'?'Every logical input is restored, up to global phase.':`A logical <strong>${a.effect}</strong> remains. A zero syndrome does not guarantee the original message: this error exceeds the one-qubit guarantee.`;
-    panel.innerHTML=`<span class="mini-label">RECOVERY</span><h4>Use the syndrome to choose the gates.</h4><p>Bit record ${a.syn.slice(0,6).join('')} → <strong>${opLabel(bitOps)}</strong><br>Phase record (${a.syn.slice(6).join(', ')}) → <strong>${opLabel(phaseOps)}</strong></p><div class="step-tabs" role="group" aria-label="Recovery stage"><button data-recovery-step="0" class="${recoveryStep===0?'selected':''}">0. Before correction</button><button data-recovery-step="1" class="${recoveryStep===1?'selected':''}">1. Apply bit gates</button><button data-recovery-step="2" class="${recoveryStep===2?'selected':''}">2. Apply phase gates</button></div><div class="circuit-wrap"><svg id="recovery-circuit" viewBox="0 0 640 420" role="group" aria-label="Shor recovery circuit with bit and phase correction gates">${svg}</svg></div><div class="recovery-state"><strong>${status}</strong><div class="formula">Remaining syndrome: ${signRecord(remaining)}</div><p>${recoveryStep===2?verdict:'Click the next step or its circuit marker to apply the gates and update the state.'}</p></div>`;
+    panel.innerHTML=`<span class="mini-label">RECOVERY</span><h4>Use the syndrome to choose the gates.</h4><p>Bit record ${a.syn.slice(0,6).join('')} → <strong>${opLabel(bitOps)}</strong><br>Phase record (${a.syn.slice(6).join(', ')}) → <strong>${opLabel(phaseOps)}</strong></p><div class="step-tabs" role="group" aria-label="Recovery stage"><button data-recovery-step="0" class="${recoveryStep===0?'selected':''}">0. Before correction</button><button data-recovery-step="1" class="${recoveryStep===1?'selected':''}">1. Apply bit gates</button><button data-recovery-step="2" class="${recoveryStep===2?'selected':''}">2. Apply phase gates</button></div><p class="circuit-hint">Click a qubit on the left to cycle its applied error I → X → Y → Z → I. These are the same errors as in the block diagram above; the selected recovery step stays in place as you edit.</p><div class="circuit-wrap"><svg id="recovery-circuit" viewBox="0 0 640 420" role="group" aria-label="Shor recovery circuit with clickable applied errors and bit and phase correction gates">${svg}</svg></div><div class="recovery-state"><strong>${status}</strong><div class="formula">Remaining syndrome: ${signRecord(remaining)}</div><p>${recoveryStep===2?verdict:'Click the next step or its circuit marker to apply the gates and update the state.'}</p></div>`;
     const change=i=>{recoveryStep=i;mark('shor');renderShor();};
     bindMarkers('Recovery',change);
     $$('[data-recovery-step]').forEach(b=>b.onclick=()=>{const i=+b.dataset.recoveryStep;change(i);document.querySelector(`[data-recovery-step="${i}"]`).focus({preventScroll:true});});
+    $$('[data-recovery-qubit]').forEach(el=>{const act=()=>{const i=+el.dataset.recoveryQubit;cycleShorError(i);document.querySelector(`[data-recovery-qubit="${i}"]`).focus({preventScroll:true});};el.onclick=act;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();act();}};});
   }
   function renderPhaseCheck(bit){
     let svg=txt(12,24,'S₇ = X₁X₂X₃X₄X₅X₆','font-size="16"');
@@ -162,8 +173,8 @@
     $('phase-check-outcome').innerHTML=`⟨S₇⟩ = ${bit?'−1':'+1'} → s₇ = ${bit}`;
   }
   function renderShor(){
-    const {p,phi}=params('shor'),a=QEC.analyze(error,p,phi),count=[...error].filter(p=>p!=='I').length;selectButtons('#error-brush button','brush',brush);
-    $('shor-map').innerHTML=[0,1,2].map(b=>`<div class="qubit-block"><div class="block-title"><strong>BLOCK ${'ABC'[b]}</strong><span>q${sub[b*3+1]}–q${sub[b*3+3]}</span></div><div class="qubits">${[0,1,2].map(i=>{const q=b*3+i,p=error[q];return `<button class="qubit" data-qubit="${q}" data-p="${p}" aria-label="Qubit ${q+1}: ${p==='I'?'no error':p+' error'}. ${p===brush?'Remove error':'Apply '+brush}" aria-pressed="${p!=='I'}">${p==='I'?q+1:p}<small>q${sub[q+1]}</small></button>`;}).join('')}</div><div class="block-parities">${[0,1].map(i=>`<span class="${a.syn[b*2+i]?'fail':''}">s${sub[b*2+i+1]} = ${a.syn[b*2+i]}</span>`).join('')}</div></div>`).join('');
+    const {p,phi}=params('shor'),a=QEC.analyze(error,p,phi),count=[...error].filter(p=>p!=='I').length;
+    $('shor-map').innerHTML=[0,1,2].map(b=>`<div class="qubit-block"><div class="block-title"><strong>BLOCK ${'ABC'[b]}</strong><span>q${sub[b*3+1]}–q${sub[b*3+3]}</span></div><div class="qubits">${[0,1,2].map(i=>{const q=b*3+i,p=error[q];return `<button class="qubit" data-qubit="${q}" data-p="${p}" aria-label="Qubit ${q+1}: ${p==='I'?'no error':p+' error'}. Click to change to ${nextPauli(p)}">${p}<small>q${sub[q+1]}</small></button>`;}).join('')}</div><div class="block-parities">${[0,1].map(i=>`<span class="${a.syn[b*2+i]?'fail':''}">s${sub[b*2+i+1]} = ${a.syn[b*2+i]}</span>`).join('')}</div></div>`).join('');
     $('shor-bit-syndrome').innerHTML=[0,1,2].map(b=>synHtml(a.syn.slice(b*2,b*2+2))).join('<span class="syn-divider">|</span>');$('shor-phase-syndrome').innerHTML=synHtml(a.syn.slice(6));
     $('shor-syndrome-formulas').innerHTML=QEC.checks.map((g,i)=>`<div class="check-formula ${a.syn[i]?'failed':''}"><strong>S${sub[i+1]} = ${pauliLabel(g)}</strong><div class="formula check-outcome"><span>⟨${pauliLabel(g)}⟩ = ${a.syn[i]?'−1':'+1'}</span><span>→ s${sub[i+1]} = <b>${a.syn[i]}</b></span></div></div>`).join('');
     const phaseSigns=[0,1,2].map(b=>[...error.slice(b*3,b*3+3)].filter(p=>p==='Z'||p==='Y').length%2);
@@ -171,12 +182,47 @@
     feedback('shor-feedback',`Applied error: <strong>${pauliLabel(error)}</strong>. ${count===0?'All checks pass.':count===1?'The one-qubit guarantee applies. Compare the nonzero syndrome bits with the check formulas above.':`${count} qubits carry errors, beyond the one-qubit guarantee. The recovery below shows what this decoder does for this particular pattern.`}`,count>1?'warning':'');
     renderRecovery(a);
     renderPhaseCheck(a.syn[6]);
-    $$('[data-qubit]').forEach(b=>b.onclick=()=>{const i=+b.dataset.qubit,e=[...error];e[i]=e[i]===brush?'I':brush;error=e.join('');recoveryStep=0;mark('shor');renderShor();document.querySelector(`[data-qubit="${i}"]`).focus({preventScroll:true});});
+    $$('[data-qubit]').forEach(b=>b.onclick=()=>{const i=+b.dataset.qubit;cycleShorError(i);document.querySelector(`[data-qubit="${i}"]`).focus({preventScroll:true});});
   }
-  $$('[data-brush]').forEach(b=>b.onclick=()=>{brush=b.dataset.brush;renderShor();});$$('[data-preset]').forEach(b=>b.onclick=()=>{error=b.dataset.preset;recoveryStep=0;mark('shor');renderShor();});
-  $('shor-reset').onclick=()=>{error='IIIIIIIII';brush='X';recoveryStep=0;renderShor();};renderShorCircuit();renderShor();
+  $$('[data-preset]').forEach(b=>b.onclick=()=>{error=b.dataset.preset;mark('shor');renderShor();});
+  $('shor-reset').onclick=()=>{error='IIIIIIIII';recoveryStep=0;renderShor();};renderShorCircuit();renderShor();
 
-  // 04 — measurement removes coherence between error sectors, not within a logical state.
+  // 04 — basic stabilizer language, then independent local error controls.
+  // Read Pauli strings column by column; each local exchange supplies one sign.
+  function localSignGrid(id,left,right,leftLabel,rightLabel){
+    const anti=[...left].map((p,i)=>p!=='I'&&right[i]!=='I'&&p!==right[i]);
+    const row=(label,values,classes)=>`<span class="sign-row-label">${label}</span>${values.map((v,i)=>`<span class="sign-cell ${classes(i)}">${v}</span>`).join('')}`;
+    $(id).innerHTML=`<div class="sign-grid-scroll"><div class="sign-grid">${row('QUBIT',sub.slice(1).map(s=>'q'+s),()=>'sign-qubit')}${row(leftLabel,[...left],i=>`letter-${left[i]} ${anti[i]?'minus-cell':''}`)}${row(rightLabel,[...right],i=>`letter-${right[i]} ${anti[i]?'minus-cell':''}`)}${row('SIGN',anti.map(a=>a?'−1':'+1'),i=>anti[i]?'minus-cell':'plus-cell')}</div></div>`;
+    return anti.filter(Boolean).length;
+  }
+  function renderPauliDemo(p){
+    const outputs={I:['|0⟩','|1⟩','Identity'],X:['|1⟩','|0⟩','Bit flip'],Y:['i|1⟩','−i|0⟩','Y = iXZ'],Z:['|0⟩','−|1⟩','Phase flip']}[p];
+    selectButtons('[data-pauli-demo]','pauliDemo',p);
+    $('pauli-action').innerHTML=`<span class="pauli-action-name">${outputs[2]}</span><div class="pauli-action-lines"><span>|0⟩</span><span class="pauli-gate">${p}</span><span>⟶ ${outputs[0]}</span><span>|1⟩</span><span class="pauli-gate">${p}</span><span>⟶ ${outputs[1]}</span></div>`;
+  }
+  $$('[data-pauli-demo]').forEach(b=>b.onclick=()=>{renderPauliDemo(b.dataset.pauliDemo);mark('stabilizers');});renderPauliDemo('Z');
+  ['compatible-a','compatible-b'].forEach((id,j)=>{$(id).innerHTML=QEC.checks.map((g,i)=>`<option value="${i}"${i===(j?6:2)?' selected':''}>S${sub[i+1]} = ${pauliLabel(g)}</option>`).join('');$(id).onchange=()=>{renderCompatibleChecks();mark('stabilizers');};});
+  function renderCompatibleChecks(){
+    const a=+$('compatible-a').value,b=+$('compatible-b').value;
+    const count=localSignGrid('compatible-diagram',QEC.checks[a],QEC.checks[b],`S${sub[a+1]}`,`S${sub[b+1]}`);
+    $('compatible-diagram').insertAdjacentHTML('beforeend',`<div class="sign-summary"><span>${count} local minus signs → ${count===0?'+1':Array(count).fill('(−1)').join(' × ')+' = +1'}</span><span class="badge good">COMMUTE</span></div><div class="formula compatible-result">S${sub[a+1]} S${sub[b+1]} = S${sub[b+1]} S${sub[a+1]}</div><p class="caption">Try another pair: all eight checks are compatible.</p>`);
+  }
+  renderCompatibleChecks();
+  let checkError='IIIIXIIII',selectedCheck=2;
+  function renderChecks(){
+    const syn=QEC.syndrome(checkError),g=QEC.checks[selectedCheck];$('matrix-error').textContent=pauliLabel(checkError);
+    $('check-qubits').innerHTML=[...checkError].map((p,i)=>`<button class="qubit ${g[i]!=='I'?'check-active':''}" data-check-qubit="${i}" data-p="${p}" aria-label="Stabilizer lab qubit ${i+1}: ${p==='I'?'no error':p}. Click to change to ${nextPauli(p)}">${p}<small>q${sub[i+1]}</small></button>`).join('');
+    $('check-table').innerHTML=QEC.checks.map((g,i)=>`<tr class="${i===selectedCheck?'selected':''}"><td><button data-check="${i}" aria-label="Inspect stabilizer S${i+1}" aria-pressed="${i===selectedCheck}">S${sub[i+1]}</button></td>${[...g].map((p,j)=>`<td class="letter-${p}${p!=='I'&&checkError[j]!=='I'&&p!==checkError[j]?' anti':''}">${p}</td>`).join('')}<td class="matrix-result"><span class="badge ${syn[i]?'bad':'good'}">${syn[i]?'−1 → 1':'+1 → 0'}</span></td></tr>`).join('');
+    const count=localSignGrid('check-detail',g,checkError,`S${sub[selectedCheck+1]}`,'E');
+    $('check-detail').insertAdjacentHTML('beforeend',`<div class="sign-summary"><span>${count} local minus ${count===1?'sign':'signs'} → ${count%2?'odd':'even'}</span><span class="badge ${count%2?'bad':'good'}">${count%2?'anticommute':'commute'}</span></div><div class="syndrome-flow"><div class="formula">S${sub[selectedCheck+1]} E|ψ<sub>L</sub>⟩<br>= ${count%2?'−':''}E S${sub[selectedCheck+1]}|ψ<sub>L</sub>⟩<br>= ${count%2?'−':''}E|ψ<sub>L</sub>⟩</div><span class="flow-arrow" aria-hidden="true">⟶</span><div class="syndrome-verdict ${count%2?'failed':''}"><span>CHECK EIGENVALUE</span><strong>${count%2?'−1':'+1'}</strong><span>SYNDROME BIT</span><strong>s${sub[selectedCheck+1]} = ${count%2}</strong></div></div><p class="caption">Reversing two different, non-identity Pauli operators contributes −1. The result is independent of α and β.</p>`);
+    $$('[data-check]').forEach(b=>b.onclick=()=>{selectedCheck=+b.dataset.check;mark('stabilizers');renderChecks();document.querySelector(`[data-check="${selectedCheck}"]`).focus({preventScroll:true});});
+    $$('[data-check-qubit]').forEach(b=>b.onclick=()=>{const i=+b.dataset.checkQubit;checkError=cyclePauliAt(checkError,i);mark('stabilizers');renderChecks();document.querySelector(`[data-check-qubit="${i}"]`).focus({preventScroll:true});});
+  }
+  $$('[data-check-preset]').forEach(b=>b.onclick=()=>{checkError=b.dataset.checkPreset;mark('stabilizers');renderChecks();});
+  $('checks-reset').onclick=()=>{checkError='IIIIIIIII';selectedCheck=2;renderChecks();};renderChecks();
+
+
+  // 05 — use check eigenspaces to explain coherent-error measurement.
   let rotationAxis='X',lastCoherent=null;
   const axes={X:[1,0,0],Z:[0,0,1],XYZ:[Math.sqrt(1/3),Math.sqrt(1/3),Math.sqrt(1/3)]};
   const sectorErrors=['IIIIIIIII','IIIIXIIII','IIIIYIIII','IIIIZIIII'],sectorPaulis=['I','X₅','Y₅','Z₅'];
@@ -190,6 +236,11 @@
     const op=rotationAxis==='XYZ'?'(X₅ + Y₅ + Z₅) / √3':rotationAxis+'₅';
     const numeric=coeff.slice(1).map((v,i)=>v>1e-12?`${fmt(v)} ${sectorPaulis[i+1]}`:'').filter(Boolean).join(' + ');
     $('rotation-formula').innerHTML=`R<sub>${rotationAxis==='XYZ'?'n':rotationAxis},5</sub>(θ) = cos(θ/2) I − i sin(θ/2) ${op}<br><strong>≈ ${fmt(coeff[0])} I${numeric?` − i (${numeric})`:''}</strong><span class="equation-note">θ = ${angle}°${rotationAxis==='XYZ'?' · n = (1, 1, 1)/√3':''}</span>`;
+    $('coherent-check-context').innerHTML=rotationAxis==='X'
+      ?'<strong>Selected axis: X.</strong> The two possible full records are 00000000 for I and 00110000 for X₅. The calculation with S = Z₄Z₅ explains why their sectors are distinguishable.'
+      :rotationAxis==='Z'
+        ?'<strong>Selected axis: Z.</strong> Z₄Z₅ commutes with Z₅, so this single check has eigenvalue +1 for both occupied terms. The phase check S₇ = X₁X₂X₃X₄X₅X₆ distinguishes I from Z₅. The full records below are 00000000 and 00000011.'
+        :'<strong>Selected axis: equal X, Y, Z.</strong> Z₄Z₅ groups I and Z₅ in its +1 eigenspace, and X₅ and Y₅ in its −1 eigenspace. Other checks complete the distinction: the full eight-bit records below separate all four terms.';
     const occupied=coeff.map((v,i)=>({v,i})).filter(t=>t.v>1e-12);
     const before=occupied.map(({v,i})=>`${i?'− i ':''}${fmt(v)} ${i?sectorPaulis[i]:''}|Ψ<sub>L</sub>⟩`).join(' + ').replaceAll('+ −','−');
     const selected=lastCoherent?.index,selectedPauli=selected?sectorPaulis[selected]:'';
@@ -221,32 +272,18 @@
   $('coherent-reset').onclick=()=>{$('rotation').value=60;$('coherent-prob').value=50;$('coherent-phase').value=0;rotationAxis='X';lastCoherent=null;renderCoherent();};renderCoherent();
 
 
-  // 05 — independent local error controls, adjacent to the stabilizer matrix.
-  let checkError='IIIIYIIII',checkBrush='Y',selectedCheck=2;
-  function renderChecks(){
-    const syn=QEC.syndrome(checkError),g=QEC.checks[selectedCheck];$('matrix-error').textContent=pauliLabel(checkError);selectButtons('[data-check-brush]','checkBrush',checkBrush);
-    $('check-qubits').innerHTML=[...checkError].map((p,i)=>`<button class="qubit ${g[i]!=='I'?'check-active':''}" data-check-qubit="${i}" data-p="${p}" aria-label="Stabilizer lab qubit ${i+1}: ${p==='I'?'no error':p}. ${p===checkBrush?'Remove error':'Apply '+checkBrush}" aria-pressed="${p!=='I'}">${p==='I'?i+1:p}<small>q${sub[i+1]}</small></button>`).join('');
-    $('check-table').innerHTML=QEC.checks.map((g,i)=>`<tr class="${i===selectedCheck?'selected':''}"><td><button data-check="${i}" aria-label="Inspect stabilizer S${i+1}" aria-pressed="${i===selectedCheck}">S${sub[i+1]}</button></td>${[...g].map((p,j)=>`<td class="letter-${p}${p!=='I'&&checkError[j]!=='I'&&p!==checkError[j]?' anti':''}">${p}</td>`).join('')}<td class="matrix-result"><span class="badge ${syn[i]?'bad':'good'}">${syn[i]?'−1 → 1':'+1 → 0'}</span></td></tr>`).join('');
-    const positions=[];[...g].forEach((p,i)=>{if(p!=='I'&&checkError[i]!=='I'&&p!==checkError[i])positions.push(`q${sub[i+1]} (${p} with ${checkError[i]})`);});
-    $('check-detail').innerHTML=`<strong>S${sub[selectedCheck+1]} = ${pauliLabel(g)}</strong><br>${positions.length?`Local anticommutations at ${positions.join(', ')}.`:'No local anticommutations with the current error.'} The count ${positions.length} is ${positions.length%2?'odd':'even'}.<div class="formula">S${sub[selectedCheck+1]} E = ${positions.length%2?'−':''}E S${sub[selectedCheck+1]} → s${sub[selectedCheck+1]} = ${positions.length%2}</div><span class="caption">Teal rings mark the selected check’s qubits directly above this table. Coral underlines mark local anticommutations.</span>`;
-    $$('[data-check]').forEach(b=>b.onclick=()=>{selectedCheck=+b.dataset.check;mark('stabilizers');renderChecks();document.querySelector(`[data-check="${selectedCheck}"]`).focus({preventScroll:true});});
-    $$('[data-check-qubit]').forEach(b=>b.onclick=()=>{const i=+b.dataset.checkQubit,e=[...checkError];e[i]=e[i]===checkBrush?'I':checkBrush;checkError=e.join('');mark('stabilizers');renderChecks();document.querySelector(`[data-check-qubit="${i}"]`).focus({preventScroll:true});});
-  }
-  $$('[data-check-brush]').forEach(b=>b.onclick=()=>{checkBrush=b.dataset.checkBrush;renderChecks();});$$('[data-check-preset]').forEach(b=>b.onclick=()=>{checkError=b.dataset.checkPreset;mark('stabilizers');renderChecks();});
-  $('checks-reset').onclick=()=>{checkError='IIIIIIIII';checkBrush='Y';selectedCheck=2;renderChecks();};renderChecks();
-
-
-  // 06 — formative questions. Wrong answers remain available for revision.
+  // 07 — formative questions. Wrong answers remain available for revision.
   const questions=[
     {title:'The received words 010 and 101 have the same syndrome. What does this show?',options:['A syndrome is a copy of the original message.','A syndrome can reveal a disturbance without revealing the message.','The two words must have the same original message.'],correct:1,reason:'Both have neighbor parities 11. Under the one-flip model, they identify the middle position, but correspond to different original messages.'},
     {title:'A Z₁ error acts on (|000⟩ + |111⟩)/√2. What do the bit-repetition checks report?',options:['00, even though the logical state changed.','10, identifying the first qubit.','11, because a phase flip changes both parities.'],correct:0,reason:'Z₁ produces (|000⟩ − |111⟩)/√2. Each basis string still has equal neighboring bits, so the syndrome is 00. The two relative-phase states are orthogonal.'},
     {title:'In the Shor code, a Y₅ error produces which record (A | B | C ; phase)?',options:['00 | 11 | 00 ; 00','00 | 00 | 00 ; 11','00 | 11 | 00 ; 11'],correct:2,reason:'Y has both bit and phase components. X₅ fails the two checks in block B; Z₅ fails both block-sign comparisons. Apply X₅, then Z₄. The remaining global factor i is unobservable.'},
     {title:'Why can Z₄ correct an actual Z₅ error in the Shor code?',options:['The decoder must first learn the hidden amplitudes.','Z₄Z₅ acts as identity on the entire code space.','Any correction with a matching syndrome always works.'],correct:1,reason:'Z₄Z₅ is a stabilizer. These two phase errors have the same action on the code. Matching syndromes alone are not sufficient for arbitrary error sets: the residual action must be trivial on the logical state.'},
-    {title:'For Rₓ,₅(60°), which statement about syndrome measurement is correct?',options:['The X₅ record occurs with probability 1/4; either branch can recover the message.','The X₅ record occurs with probability 1/2 because the angle is half of 120°.','Measuring the syndrome must destroy the logical superposition.'],correct:0,reason:'The X₅ sector has probability sin²(60°/2) = sin²(30°) = 1/4. The other sector has probability 3/4. Measurement distinguishes error sectors while each conditional state retains the unknown logical amplitudes.'}
+    {title:'For Rₓ,₅(60°) = (√3/2)I − (i/2)X₅, which statement about syndrome measurement is correct?',options:['The X₅ record occurs with probability 1/4; either branch can recover the message.','The X₅ record occurs with probability 1/2 because its coefficient has magnitude 1/2.','Measuring the syndrome must destroy the logical superposition.'],correct:0,reason:'The coefficient of X₅ has squared magnitude 1/4. For S = Z₄Z₅, the no-error and X₅ terms have eigenvalues +1 and −1. The full syndrome measurement distinguishes those sectors while each conditional state retains the unknown logical amplitudes.'}
   ];
+  const quizSections=['repetition','quantum','shor','formalism','coherent'];
   let answers={};
   function renderQuiz(){
-    $('quiz').innerHTML=questions.map((q,i)=>`<article class="quiz-card"><span class="mini-label">CHECK ${String(i+1).padStart(2,'0')}</span><h3>${q.title}</h3><div class="quiz-options" role="group" aria-label="Question ${i+1}">${q.options.map((o,j)=>`<button data-question="${i}" data-answer="${j}" class="${answers[i]===j?`chosen ${j===q.correct?'correct':'incorrect'}`:''}" aria-pressed="${answers[i]===j}">${o}</button>`).join('')}</div><p class="quiz-explanation" aria-live="polite">${answers[i]===undefined?'Choose an answer to see the explanation.':`<strong>${answers[i]===q.correct?'Yes.':'Not quite. Try again.'}</strong> ${q.reason}`}</p></article>`).join('');
+    $('quiz').innerHTML=questions.map((q,i)=>`<article class="quiz-card"><span class="mini-label">CHECK ${String(i+1).padStart(2,'0')}</span><h3>${q.title}</h3><div class="quiz-options" role="group" aria-label="Question ${i+1}">${q.options.map((o,j)=>`<button data-question="${i}" data-answer="${j}" class="${answers[i]===j?`chosen ${j===q.correct?'correct':'incorrect'}`:''}" aria-pressed="${answers[i]===j}">${o}</button>`).join('')}</div><p class="quiz-explanation" aria-live="polite">${answers[i]===undefined?'Choose an answer to see the explanation.':`<strong>${answers[i]===q.correct?'Yes.':'Not quite. Try again.'}</strong> ${q.reason} <a href="#${quizSections[i]}">Revisit the explanation.</a>`}</p></article>`).join('');
     const count=Object.keys(answers).length,right=questions.filter((q,i)=>answers[i]===q.correct).length;$('quiz-score').textContent=count?`${count} of 5 answered · ${right} currently correct`:'0 of 5 questions answered';
     $$('[data-question]').forEach(b=>b.onclick=()=>{const i=+b.dataset.question,j=+b.dataset.answer;answers[i]=j;if(Object.keys(answers).length===5)mark('practice');renderQuiz();document.querySelector(`[data-question="${i}"][data-answer="${j}"]`).focus({preventScroll:true});});
   }

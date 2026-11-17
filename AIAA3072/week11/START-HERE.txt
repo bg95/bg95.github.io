@@ -2,7 +2,7 @@ AIAA3072 — Week 11: Quantum Error Correction Lab
 
 1. Extract the entire ZIP into a folder.
 2. Open index.html in a modern web browser.
-3. Start with “Redundancy & syndromes” and follow the six lessons.
+3. Start with “Redundancy & syndromes” and follow the seven sections.
 
 Keep all the extracted files together. No installation, server, account,
 or internet connection is needed. This package contains only the interactive
@@ -12,9 +12,14 @@ Click numbered markers directly on each circuit to inspect numerical states.
 Tab/Enter and left/right arrow keys also navigate the circuit. The complete
 correction circuit includes encoding, error, ancilla checks, and recovery.
 
-In Experiment 03, click the recovery steps to apply the bit and phase gates.
-In Experiment 04, prepare the coherent state, measure its syndrome, then correct
-the surviving branch. Prepare again to compare outcomes.
+Click a qubit to cycle I -> X -> Y -> Z -> I. The error gates in Experiment 02
+are clickable too. In Experiment 03, the error painter and the qubits beside
+the recovery circuit edit the same errors. Changing an error keeps your selected time step and updates its state.
+Click the recovery steps to apply the bit and phase gates.
+
+Experiment 04 introduces basic stabilizer checks. In Experiment 05, prepare
+the coherent state, measure its syndrome, then correct the surviving branch.
+Prepare again to compare outcomes. Experiment 06 develops dimension and recovery.
 
 Try changing the input, painting X/Y/Z errors, and answering the short checks. On a phone, wide circuits
 and tables scroll sideways within their panels.
@@ -25,4 +30,4 @@ Quiz answers and simulated measurements are not sent anywhere.
 This is a teaching model with ideal encoding, checks, and recovery.
 Week 12 introduces noisy checks and fault tolerance.
 
-Desktop text is enlarged automatically. Phone text keeps its original size.
+The desktop layout uses a comfortable 90% scale. Phone text keeps its original size.
