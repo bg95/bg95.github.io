@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 12 · Surface Codes & Recovery</title><meta name="description" content="An offline self-study lab on local quantum checks, error chains, noisy syndrome histories, and matching decoders.">
+<meta name="theme-color" content="#282b5a"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261120-graph">
+<script defer src="engine.js?v=20261120-graph"></script><script defer src="app.js?v=20261120-graph"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to lesson</a>
+<aside class="sidebar">
+ <a class="brand" href="#overview"><span class="brand-symbol">ψ</span><span>AIAA3072<small>THE INTERACTIVE NOTES</small></span></a>
+ <div class="course-label">WEEK 12 · SELF-STUDY LAB</div>
+ <nav aria-label="Lesson sections">
+ <a href="#overview" class="active"><span>00</span>The big picture</a><a href="#patch"><span>01</span>Read a local patch</a><a href="#measure"><span>02</span>The general check circuit</a><a href="#chains"><span>03</span>Errors and syndrome graphs</a><a href="#logical"><span>04</span>Decode & recover</a><a href="#time"><span>05</span>When reports can be wrong</a><a href="#matching"><span>06</span>Decode a noisy history</a><a href="#practice"><span>07</span>Check your understanding</a><a href="#scaling"><span>08</span>The threshold result</a><a href="#circuits"><span>+</span>Further study: faulty gates</a>
+ </nav>
+ <div class="side-bottom"><div class="progress-label"><span>Your exploration</span><span id="progress-text">0 / 8</span></div><div class="progress-track"><span id="progress-fill"></span></div><p>Progress stays in this browser.</p><button class="text-button" id="reset-progress">Reset progress</button></div>
+</aside>
+<main id="main">
+ <header class="topbar"><span>Foundations of Quantum Computing and Quantum AI</span><span>EXPLORE · PREDICT · EXPLAIN</span></header>
+ <section id="overview" class="hero section-anchor">
+  <div><div class="eyebrow">WEEK 12 / SURFACE CODES & SPACETIME</div><h1>Local clues.<br><em>A global message.</em></h1><p>Read the lattice as a graph of possible errors. Use its check outcomes to choose a correction and recover the message. Then extend the same decoder to unreliable reports.</p><a class="button primary" href="#patch">Start exploring <span aria-hidden="true">↗</span></a><span class="duration">8 learning sections · diagrams &amp; a knowledge check<br>About 60–75 minutes, at your own pace</span></div>
+  <div class="hero-visual"><span class="eyebrow">NINE DATA QUBITS · ONE LOGICAL QUBIT</span><svg id="hero-patch" viewBox="0 0 560 430" role="img" aria-label="A rotated surface-code patch, with local checks and a logical string across its top row"></svg><p>A logical string can change the message<br>while every local check still passes.</p></div>
+ </section>
+ <div class="orientation"><div><span class="eyebrow">BRING FROM WEEK 11</span><p>A syndrome reports check outcomes, not the logical amplitudes. An X error changes a Z check; a Z error changes an X check.</p></div><div><span class="eyebrow">THIS WEEK’S CENTRAL TEST</span><p>After error E and correction C, ask what <strong>CE does to the logical message</strong>. Clearing the checks is necessary, but not sufficient.</p></div></div>
+ <div class="route"><span>encode</span><b>→</b><span>measure checks</span><b>→</b><span>decode &amp; recover</span><b>→</b><span>allow wrong reports</span><b>→</b><span>decode across time</span><b>→</b><span>threshold result</span></div>
+
+ <section id="patch" class="lesson section-anchor">
+  <div class="section-heading"><span class="section-number">01</span><div><span class="eyebrow">LOCAL CHECKS, GLOBAL INFORMATION</span><h2>Read the patch before the paths.</h2></div></div>
+  <p class="lead">Here the nine dots are <strong>data qubits</strong>, labelled by row and column: q₁₁ is top left. Each shaded square or boundary cap is a joint check. A check acts on its corner qubits, without reading them individually.</p>
+  <div class="lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 01</span><h3>Why can we measure all eight checks?</h3></div><button id="patch-reset" class="reset">Reset</button></div>
+   <p>Choose one X check and one Z check. Their shared qubits are ringed. You can also click the check labels directly on the patch.</p>
+   <div class="two-col"><div><div class="diagram"><svg id="patch-svg" viewBox="0 0 560 470" role="group" aria-label="Select local checks on the nine-qubit patch"></svg></div><div class="legend"><span class="x-key">X-type check</span><span class="z-key">Z-type check</span><span class="overlap-key">shared qubit</span></div></div>
+    <div><div class="control-group"><span class="control-label">X check</span><div id="x-checks" class="segmented"></div></div><div class="control-group"><span class="control-label">Z check</span><div id="z-checks" class="segmented"></div></div><div id="patch-formulas" class="formula-stack"></div><div id="commutation" class="result" aria-live="polite"></div></div>
+   </div>
+   <div class="concept"><h4>Two local minus signs cancel.</h4><p>On a shared qubit, XZ = −ZX. For these checks the overlap is always 0 or 2, so their full products commute. The same rule applies to the shortened two-qubit checks at the boundary.</p><div class="formula">SˣSᶻ = (−1)<sup>overlap</sup>SᶻSˣ = SᶻSˣ</div></div>
+   <div class="key-facts"><div><strong>9 − 8 = 1</strong><span>logical qubit; the eight checks are independent</span></div><div><strong>2<sup>9−8</sup> = 2</strong><span>dimensions, allowing α|0<sub>L</sub>⟩ + β|1<sub>L</sub>⟩</span></div><div><strong>[[9, 1, 3]]</strong><span>9 physical qubits, 1 logical qubit, distance 3</span></div></div>
+   <p class="try"><strong>Try this:</strong> compare Sˣ₁ with Sᶻ₃, then Sˣ₃ with Sᶻ₂. Which qubits supply the minus signs?</p>
+  </div>
+ </section>
+
+
+ <section id="measure" class="lesson section-anchor">
+  <div class="section-heading"><span class="section-number">02</span><div><span class="eyebrow">THE CENTRAL MEASUREMENT CIRCUIT</span><h2>One circuit for any Pauli check.</h2></div></div>
+  <p class="lead">Choose a Hermitian Pauli product S. The ancilla reports its <strong>joint eigenvalue</strong>. The ZZ parity meter and all-X check are special cases of this same construction.</p>
+  <div class="lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 02</span><h3>Follow the check information into one classical bit.</h3></div><button id="meter-reset" class="reset">Reset</button></div>
+   <div class="control-group"><span class="control-label">Choose the check S</span><div class="segmented wrap"><button data-meter-check="ZZ">Z₁Z₂</button><button data-meter-check="XXXX">X₁X₂X₃X₄</button><button data-meter-check="XYZ">X₁Y₂Z₃</button></div></div>
+   <div class="control-group"><span class="control-label">Incoming check sector</span><div class="segmented wrap"><button data-meter-sector="plus">Eigenvalue +1</button><button data-meter-sector="minus">Eigenvalue −1</button><button data-meter-sector="both">Superposition of sectors</button></div></div>
+   <label id="meter-prob-control" class="meter-prob" hidden>Weight in the −1 sector <output id="meter-prob-value"></output><input id="meter-prob" type="range" min="0" max="100" step="5" value="25"></label>
+   <p class="hint">Each controlled gate acts on one Pauli factor; identity factors are skipped.</p>
+   <p class="hint">Click a dashed time line or its t₀–t₄ circle to inspect that state. Changing the check keeps your selected time step.</p><div class="circuit-wrap meter-wrap"><svg id="meter-circuit" viewBox="0 0 920 390" role="group" aria-label="Step through the general Pauli-check measurement circuit"></svg></div>
+   <div id="meter-state" class="state-box" aria-live="polite"></div>
+   <div id="meter-outcomes" class="segmented wrap" aria-label="Inspect a measurement outcome"></div>
+   <div class="concept"><div class="formula">P₀ = (I + S)/2 &nbsp; &nbsp; P₁ = (I − S)/2</div><p>Write S|ψ₊⟩ = +|ψ₊⟩ and S|ψ₋⟩ = −|ψ₋⟩. Each |ψ±⟩ can still contain an unknown logical superposition. The meter selects a sector; it preserves the state <em>inside</em> that sector.</p><p class="caption">For a negative product −S, add Z on the ancilla before its final H, or swap the meanings of bits 0 and 1. The all-Z implementation above and the data-to-ancilla CNOT parity meter give the same projectors.</p></div>
+  </div>
+ </section>
+
+ <section id="chains" class="lesson section-anchor">
+  <div class="section-heading"><span class="section-number">03</span><div><span class="eyebrow">WHAT THE DECODER’S GRAPH MEANS</span><h2>A qubit error becomes an edge.</h2></div></div>
+  <p class="lead">The decoder knows which checks flipped, but not which qubits were faulty. The <strong>syndrome graph</strong> turns that evidence into a path problem: checks are vertices, and possible qubit errors are edges. Start with one error on the same nine-qubit patch.</p>
+  <div class="lab intro-lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 03A · DEFINE ONE DECODING-GRAPH EDGE</span><h3>Which checks does this one error flip?</h3></div></div>
+   <div class="segmented wrap" aria-label="Single error type"><button data-intro-type="Z">Z error → X checks</button><button data-intro-type="X">X error → Z checks</button></div>
+   <p class="hint">Click a qubit to move the single error. Compare its physical location with the graph edge joining its check outcomes.</p>
+   <div class="two-col compact"><div class="diagram"><svg id="intro-patch" viewBox="0 0 560 470" role="group" aria-label="Choose the qubit for one physical error"></svg></div><div><div class="diagram"><svg id="intro-edge" viewBox="0 0 480 225" role="img" aria-label="One fault edge joins the checks it flips or a permitted boundary"></svg></div><div id="intro-readout" class="syndrome" aria-live="polite"></div><div id="intro-explanation" class="result" aria-live="polite"></div></div></div>
+  </div>
+  <div class="lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 03B · OUR ROTATED PATCH</span><h3>Combine errors: shared check flips cancel.</h3></div><button id="chain-reset" class="reset">Clear</button></div>
+   <p class="hint painter-cycle"><strong>Set each qubit:</strong> I → X → Y → Z → I. Y contributes to both the X and Z components. The examples below start with Z chains.</p>
+   <div class="preset-row"><span>Z-only examples</span><button data-chain="16">Z₂₂</button><button data-chain="18">Z₁₂Z₂₂</button><button data-chain="7">Top-row logical Z</button><button data-chain="27">Sᶻ₁ stabilizer</button></div>
+   <div class="two-col"><div><div class="segmented view-tabs" aria-label="Error-chain drawing"><button data-chain-view="patch" class="selected">Physical patch</button><button data-chain-view="graph">Syndrome graph</button></div><p id="chain-hint" class="hint"></p><div class="diagram"><svg id="chain-svg" viewBox="0 0 560 470" role="group" aria-label="Cycle data-qubit errors through I, X, Y, Z, I"></svg></div></div>
+    <div><div id="chain-operator" class="formula"></div><div id="chain-components" class="component-labels"></div><div id="chain-syndrome" class="syndrome" aria-live="polite"></div><div id="chain-counts" class="check-counts two-sector-counts"></div><div id="chain-result" class="result" aria-live="polite"></div></div></div>
+   <a class="button secondary" id="chain-decode" href="#logical">Decode this error in Experiment 04</a>
+   <div class="concept"><h4>A boundary can absorb an endpoint.</h4><p>In this course’s convention, the <strong>left and right rough boundaries</strong> absorb Z-chain endpoints, which are X-check defects. The top and bottom smooth boundaries absorb X-chain endpoints, which are Z-check defects.</p><p>On the rotated patch, turn each check region into a graph vertex and each data site into a possible fault edge: its vertices are <strong>checks</strong>, and an edge shows the Z component on the labelled data qubit, present for a Z or Y error. The X component is recorded separately by the Z checks. Clicking an edge toggles only its Z component. A red check means syndrome bit 1, or measured eigenvalue −1.</p></div>
+<details class="boundary-history"><summary>Why “rough” and “smooth”?</summary><div class="two-col compact"><div><h4>Rough · plaquette boundary</h4><svg viewBox="0 0 300 125" role="img" aria-label="A rough boundary cuts through plaquettes and leaves links ending at the boundary"><path d="M30 105H270M30 55H270M30 105V20M110 105V20M190 105V20M270 105V20" fill="none" stroke="#282b5a" stroke-width="2"/><path d="M15 20H285" stroke="#b84e36" stroke-width="3" stroke-dasharray="6 4"/><path d="M110 105V20" stroke="#7765ba" stroke-width="6"/></svg><p>Z strings can end here: an X-check defect is absorbed.</p></div><div><h4>Smooth · site boundary</h4><svg viewBox="0 0 300 125" role="img" aria-label="A smooth boundary follows a row of lattice sites"><path d="M30 105H270M30 55H270M30 105V55M110 105V55M190 105V55M270 105V55" fill="none" stroke="#282b5a" stroke-width="2"/><path d="M15 55H285" stroke="#087b77" stroke-width="3"/><path d="M150 120V55" stroke="#4c6da6" stroke-width="6" stroke-dasharray="3 5"/></svg><p>Dual X strings can end here: a Z-check defect is absorbed.</p></div></div><p>The names reflect the two cuts in early edge-qubit lattice drawings: plaquette versus site boundaries. The rotated patch keeps the names and endpoint rules; its compass directions can differ. See Dennis et al. (2002), <em>Topological quantum memory</em>, Fig. 5 (arXiv:quant-ph/0110143).</p></details>
+   <p class="try"><strong>Try this:</strong> start from Z₂₂, cycle q₁₂ to Z, and watch the shared Sˣ₁ defect disappear. Then compare the full top row with Sᶻ₁: both have zero syndrome, but only one is harmless.</p>
+  </div>
+ </section>
+
+ <section id="logical" class="lesson section-anchor">
+  <div class="section-heading"><span class="section-number">04</span><div><span class="eyebrow">SAME EVIDENCE, DIFFERENT LOGICAL ACTION</span><h2>What does the classical decoder do?</h2></div></div>
+  <p class="lead">It receives the syndrome and a noise model, then chooses a compatible Pauli correction C. Apply C to the quantum data and test the remaining operation CE, where E is the actual error. The loop ends with the recovered logical state.</p>
+
+  <div class="lab unified-decoder-lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 04A · CUSTOM PAULI ERRORS AND RECOVERY</span><h3>Edit any qubit. Measure, decode, and recover.</h3></div><button id="loop-reset" class="reset">Reset</button></div>
+   <p class="hint">Any product of I, X, Y, Z on the nine qubits is allowed. The encoder, joint checks and correction gates are ideal. The decoder assumes independent identical noise: X, Y and Z are equally likely, each less likely than I.</p>
+   <div class="preset-row"><span>Start with</span><button data-loop-error="0">Clear all</button><button data-loop-error="2">Z₁₂</button><button data-loop-error="y22">Y₂₂</button><button data-loop-error="mixed">Mixed X, Y, Z</button><button data-loop-error="logical">Top-row logical Z</button></div>
+   <div class="unified-decoder-grid">
+    <div class="shared-error-editor">
+     <h4>Actual error E · click the qubits</h4><div class="segmented wrap" aria-label="Pauli painting mode"><button data-loop-brush="cycle">Cycle I → X → Y → Z</button><button data-loop-brush="I">I</button><button data-loop-brush="X">X</button><button data-loop-brush="Y">Y</button><button data-loop-brush="Z">Z</button></div>
+     <div class="diagram"><svg id="loop-patch" viewBox="0 0 560 470" role="group" aria-label="Edit arbitrary Pauli errors on the shared nine-qubit patch"></svg></div><div id="loop-error-label" class="formula"></div><div id="loop-editor-summary" class="shared-editor-summary"></div>
+     <p class="caption">This patch always shows the actual E. The decoder receives only the syndrome. Clicking a row in 04B updates this same patch.</p>
+    </div>
+    <div class="live-recovery-panel">
+     <h4>1. Measure all eight joint checks</h4><div id="loop-evidence" class="syndrome" aria-live="polite"></div><p class="caption">Each check reports an eigenvalue: +1 → bit 0; −1 → bit 1.</p><div id="loop-checks" class="loop-check-grid"></div><div id="loop-check-formula" class="check-formula"></div>
+     <h4>2. Decode the observed syndrome</h4><div class="decoder-algorithm"><strong>A simple exact decoder for this small patch</strong><ol><li>Try I, then all one-qubit Paulis, then all two-qubit Paulis, and so on.</li><li>Compare each candidate’s eight check bits with the observed syndrome.</li><li>Choose a match with the fewest nonidentity sites. Resolve ties in a fixed order.</li></ol><p>Weight counts affected qubits; Y counts as one. This chooses a most likely individual Pauli under the stated noise model.</p></div><div id="loop-choice" class="decoder-choice" aria-live="polite"></div>
+     <h4>3. Apply the correction gates C</h4><div id="loop-gates" class="correction-gates" aria-label="Physical correction gate on each data qubit"></div><p class="caption">I means no operation. These gates return every check bit to 0.</p><div id="loop-verdict" class="result" aria-live="polite"></div>
+     <div class="residual-comparison"><span class="eyebrow">EXPERIMENT 04B · SAME PATCH, SAME DECODER</span><h3>Same syndrome. Different residual errors.</h3><p id="loop-case-context" class="hint"></p><div class="table-wrap"><table class="residual-case-table"><thead><tr><th>Choose the actual error E</th><th>Residual CE</th></tr></thead><tbody id="loop-cases"></tbody></table></div><p>Multiplying E by a stabilizer preserves its logical action. Multiplying by X̄, Z̄ or Ȳ keeps its syndrome but changes its logical action.</p><div class="formula">X̄ = X₁₁X₂₁X₃₁<br>Z̄ = Z₁₁Z₁₂Z₁₃<br>Ȳ = iX̄Z̄</div><p class="caption">Every single-qubit Pauli is correctable. Multiple faults may produce a logical error even when all checks clear. Choosing the most likely logical class would require summing over its compatible errors; this simple decoder chooses one Pauli representative.</p></div>
+    </div>
+   </div>
+   <div class="logical-message-inspector"><h4>Compare the input and recovered message</h4><div class="state-controls"><label>Input probability |β|² <output id="loop-prob-value"></output><input id="loop-prob" type="range" min="0" max="100" value="50"></label><label>Input relative phase φ <output id="loop-phase-value"></output><input id="loop-phase" type="range" min="-180" max="180" step="15" value="45"></label></div><div id="loop-message" class="message-comparison" aria-live="polite"></div><p id="loop-special-state" class="caption"></p>
+    <h4>Inspect each step of the complete cycle</h4><p class="hint">V encodes |ψ⟩ into |ψ<sub>L</sub>⟩ = α|0<sub>L</sub>⟩ + β|1<sub>L</sub>⟩. Click a stage below for its joint state. Editing E keeps the selected stage; the live results above always show a complete recovery round.</p><div class="circuit-wrap loop-wrap"><svg id="loop-circuit" viewBox="0 0 1020 210" role="group" aria-label="Encode, add arbitrary Pauli errors, measure checks, decode the syndrome, correct and recover the message"></svg></div><div id="loop-state" class="state-box" aria-live="polite"></div>
+   </div>
+  </div>
+  <div class="lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 04C · GENERAL MATCHING IDEA</span><h3>A general way to correct surface-code errors: match the endpoints.</h3></div></div>
+   <p class="hint">To scale up decoding, use a graph problem for each error sector: connect violated checks to each other or to compatible boundaries at minimum cost. This separate five-edge strip illustrates that idea, rather than the specific 3 × 3 patch in 04A–B. Assume one ideal check round and equal independent Z-fault rates below 1/2.</p>
+   <p class="hint">Click a qubit circle in the E row to toggle I ↔ Z. The syndrome, chosen correction C, and residual CE update together.</p>
+   <div class="segmented wrap" aria-label="Five-qubit error presets"><button data-strip-error="17">Two outer faults</button><button data-strip-error="14">Three middle faults</button><button data-strip-error="0">Clear errors</button></div>
+   <div id="strip-syndrome" class="syndrome" aria-live="polite"></div>
+   <div class="diagram"><svg id="strip-graph" viewBox="0 0 760 435" role="group" aria-label="Editable data errors, chosen correction, and residual displayed together"></svg></div>
+   <div class="symbol-key"><span><i class="symbol-data">Z</i> Data qubit · I or Z</span><span><i class="symbol-check">1</i> Check bit</span><span><i class="symbol-boundary">B</i> Virtual boundary</span></div>
+   <p class="caption">E = actual error; C = chosen correction; CE = residual. Each row shows the syndrome of that operator. C has the same syndrome as E; their combined action CE clears every check.</p><div class="table-wrap"><table><caption>Two compatible explanations · equal positive edge weights</caption><thead><tr><th>Correction</th><th>Cost</th><th>Decoder decision</th></tr></thead><tbody id="strip-candidates"></tbody></table></div>
+   <div id="strip-explanation" class="result" aria-live="polite"></div><p class="caption">Data-qubit circles follow <a href="https://arxiv.org/pdf/1208.0928#page=6" target="_blank" rel="noopener">Fowler et al., Fig. 1</a>. Here the letter marks the Pauli on that qubit; smaller filled circles are check records.</p>
+  </div>
+ </section>
+
+
+
+ <section id="time" class="lesson section-anchor">
+  <div class="section-heading"><span class="section-number">05</span><div><span class="eyebrow">A CHECK BIT IS NOT A NEW FAULT</span><h2>What if a check report is wrong?</h2></div></div>
+  <p class="lead">The ideal recovery loop is complete. Now a reported 1 might come from a data error <em>or</em> a wrong report. Repeat the same checks: 0, 1, 1 suggests a persistent data error; 0, 1, 0 can come from one wrong report. We call these report changes <strong>detection events</strong>. They are the evidence for extending the decoder into time.</p>
+  <div class="lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 05</span><h3>Build a fault history; inspect its visible evidence.</h3></div><button id="history-clear" class="reset">Clear faults</button></div>
+   <div class="model-box"><strong>A small, fully specified memory experiment</strong><p>Only Z faults on q₁₁, q₁₂, q₁₃ are allowed, before noisy rounds 1 and 2. We read a = Sˣ₃ and b = Sˣ₁; the other two X checks stay zero. Round 0 is known clean. Round 3 is an ideal nondestructive check round: measure the ancillas and keep the data. There are no new data faults after round 2.</p><p class="caption">Experiments 05–06 use this data-preserving closure, so recovery gates can still act on the unknown logical state. All Z checks remain zero in this Z-only fault model.</p></div>
+   <div class="preset-row"><span>Examples</span><button data-history="1">Persistent data fault</button><button data-history="64">One wrong report</button><button data-history="256">Wrong round-2 report</button><button data-history="129">Data + report fault</button></div>
+   <p class="hint">Click a qubit circle or its horizontal edge to toggle a new Z fault before that round. I means no new fault. Click a vertical report edge or its OK / flip marker to toggle a wrong report. Orange marks the faults you set; filled red check nodes mark the resulting detection events.</p>
+   <div class="symbol-key"><span><i class="symbol-data">Z</i> Data fault</span><span><i class="symbol-report">flip</i> Wrong report</span><span><i class="symbol-check">1</i> Detection event</span><span><i class="symbol-boundary">B</i> Virtual boundary</span></div>
+   <div class="history-workspace"><div class="history-figure"><div class="diagram"><svg id="history-graph" class="spacetime-diagram" viewBox="0 0 760 460" role="group" aria-label="Edit data and report faults directly on the spacetime graph"></svg></div><p class="caption">Round 3 is ideal: no new data or report faults. Its events can reveal a wrong report in round 2.</p></div><div class="history-record-panel">
+    <h4>Measured record → detection events</h4><div class="formula">δ<sub>a,t</sub> = s<sub>a,t</sub> ⊕ s<sub>a,t−1</sub></div>
+    <div class="table-wrap"><table class="history-table"><caption>s = reported check bit; δ = change since the previous round</caption><thead><tr><th>Record</th><th>t = 0<br>known</th><th>t = 1</th><th>t = 2</th><th>t = 3<br>ideal</th></tr></thead><tbody id="history-table"></tbody></table></div>
+    <div id="history-result" class="result" aria-live="polite"></div><a id="history-decode" class="button secondary" href="#matching">Decode this history in Experiment 06</a>
+   </div></div>
+   <div class="concept"><h4>The final comparison is part of the evidence.</h4><p>A wrong report in round 2 creates its second event at round 3. A persistent data fault instead remains in the terminal parity and creates no new terminal change. Omitting that comparison loses the distinction.</p><p>This is a <strong>phenomenological noise model</strong>: ideal check operations, stochastic data faults, and wrong reports. Faults inside individual gates are left to the optional extension after the decoding lesson. The final check round is ideal and preserves the quantum data. Destructive data readout is a different way to close a record, discussed on slide 51; it would end storage.</p></div>
+  </div>
+ </section>
+
+ <section id="matching" class="lesson section-anchor">
+  <div class="section-heading"><span class="section-number">06</span><div><span class="eyebrow">FROM EVENTS TO WEIGHTED PATHS</span><h2>Extend the same decoder across time.</h2></div></div>
+  <p class="lead">The decoder receives the detection events and a noise model. It connects events to each other or to permitted spatial boundaries. Every event must be accounted for. A time-like edge explains a wrong report and adds <strong>no data correction</strong>.</p>
+  <div class="lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 06</span><h3>Edit the faults. Follow the recovery live.</h3></div><button id="matching-reset" class="reset">Reset</button></div>
+   <div class="segmented wrap" aria-label="Decoding example"><button data-shot="A">Example A · three events</button><button data-shot="B">Example B · recalibration</button><button data-shot="clear">Clear faults</button></div>
+   <p class="hint">Same model as Experiment 05: only top-row Z faults, two noisy rounds, then ideal nondestructive checks. The data remain available for correction.</p><div class="fault-editor"><div class="fault-editor-title"><h4>1. Set the actual faults</h4><span>Click to toggle · orange = applied</span></div><div id="matching-fault-controls"></div></div>
+   <div class="state-controls matching-rates"><label for="data-rate">Assumed data-fault probability p<sub>d</sub><output id="data-rate-value"></output><input id="data-rate" type="range" min="0.5" max="20" step="0.5" value="1"></label><label for="report-rate">Assumed report-fault probability p<sub>m</sub><output id="report-rate-value"></output><input id="report-rate" type="range" min="0.5" max="30" step="0.5" value="10"></label></div>
+   <div class="matching-live">
+    <div><h4>2. Read the syndrome; connect its changes</h4><div id="matching-record" class="table-wrap"></div><div id="matching-evidence" class="syndrome" aria-live="polite"></div>
+     <div class="segmented wrap view-tabs" aria-label="Matching diagram view"><button data-matching-view="all">All steps</button><button data-matching-view="graph">Pair endpoints</button><button data-matching-view="paths">Expand paths</button><button data-matching-view="frame">Data edges</button></div>
+     <div class="diagram"><svg class="spacetime-diagram" id="matching-graph" viewBox="0 0 760 460" role="img" aria-label="Observed changes, matched endpoints, and expanded correction paths"></svg></div>
+     <p class="caption">Purple = matched endpoints; green = chosen fault paths. Open I/Z circles = data-qubit locations on fault edges; smaller filled nodes = checks a = Sˣ₃, b = Sˣ₁ at each round. Red = changed report. L / R squares = rough boundaries. Horizontal edges = data faults; vertical edges = report faults. Round 3 is ideal closure.</p>
+    </div>
+    <div><h4>3. Expand the paths; apply the data gates</h4><div id="matching-connections" class="connection-list"></div><p id="matching-expanded" class="expanded-paths"></p><div id="matching-result" class="result" aria-live="polite"></div>
+     <div class="diagram"><svg id="matching-recovery" viewBox="0 0 490 240" role="img" aria-label="Actual data error, physical correction gates, and residual on each qubit"></svg></div><div id="shot-verdict" class="result" aria-live="polite"></div>
+    </div>
+   </div>
+   <div class="weight-rule"><div class="formula">w<sub>e</sub> = ln((1 − p<sub>e</sub>) / p<sub>e</sub>)</div><div id="weights" class="formula"></div><p>More likely faults cost less. Independent graphlike faults, each with probability below 1/2.</p></div>
+   <p class="hint">Compare the four cheapest compatible explanations below. Click one to preview its paths; the chosen recovery stays visible.</p><div id="candidate-preview" class="result" hidden aria-live="polite"></div>
+   <div class="table-wrap"><table class="candidate-table"><caption>Same observed evidence · different possible fault histories</caption><thead><tr><th>Candidate faults</th><th>Cost</th><th>Data correction</th></tr></thead><tbody id="matching-candidates"></tbody></table></div>
+   <div class="concept"><h4>Consistent → minimum cost → successful?</h4><p>Minimum-weight perfect matching (MWPM) accounts for every event at minimum total cost. Expand the connections into fault paths, cancel repeated edges, then apply only their data gates. A minimum-cost explanation can still differ logically from the actual error.</p><p>Here all pairings on the ten-location graph are searched exactly. This optimizes a fault representative; summing probabilities over an entire logical class is a different decoding objective.</p></div>
+   <p class="try"><strong>Try this:</strong> choose Example B, then move p<sub>m</sub> from 1% through 10%. The observed record stays fixed. Watch the correction and recovery result change.</p>
+  </div>
+ </section>
+
+ <section id="practice" class="lesson section-anchor"><div class="section-heading"><span class="section-number">07</span><div><span class="eyebrow">PREDICT, THEN EXPLAIN</span><h2>Check your understanding.</h2></div></div><p class="lead">These questions test the mechanism. You can revise each answer after reading the feedback.</p><div id="quiz" class="quiz-grid"></div><p id="quiz-score" aria-live="polite"></p></section>
+ <section class="closing"><span class="eyebrow">THE BRIDGE TO WEEK 13</span><h2>The decoder needs the right target.</h2><p>Local checks hide the logical amplitudes. Noisy histories reveal detection events. A decoder uses those events to choose a recovery class. Week 13 asks how learning can improve that inference—and how to evaluate it fairly.</p></section>
+ <section id="scaling" class="lesson section-anchor">
+  <div class="section-heading"><span class="section-number">08</span><div><span class="eyebrow">PERFORMANCE BELONGS TO AN EXPERIMENT</span><h2>The memory threshold: the result.</h2></div></div>
+  <p class="lead">Sufficiently low physical error rates allow arbitrarily reliable logical storage as the code distance grows. This is the final result of the week.</p>
+  <div class="threshold-statement"><span class="eyebrow">A POSITIVE THRESHOLD EXISTS</span><div class="formula large">p &lt; p₀ &nbsp; ⇒ &nbsp; p<sub>L</sub>(p, d) → 0 as d → ∞</div><p>For some p₀ &gt; 0, increasing distance makes logical failure arbitrarily unlikely at any fixed physical rate below p₀.</p><p class="caption">Here: square planar codes with one logical qubit and O(d²) data qubits; independent data Pauli components and report flips with local rates at most p; d rounds; known initial code sector and an ideal final nondestructive check round; calibrated minimum-weight decoding in both sectors. p<sub>L</sub> counts a nontrivial residual logical Pauli per complete memory experiment.</p></div>
+  <div class="lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 08</span><h3>See what improvement with distance means.</h3></div></div>
+   <div class="segmented wrap" aria-label="Published decoder"><button data-scaling="a">Tensor-network decoder</button><button data-scaling="b">Belief-matching decoder</button></div>
+   <p class="hint">Google Quantum AI (2023): published surface-code measurements, with runs up to 25 cycles. Switch the decoder to compare the reported fits. Distance 3 is the average over four smaller patches.</p>
+   <div class="diagram"><svg id="scaling-chart" viewBox="0 0 760 350" role="img" aria-label="Published logical error per cycle at distances three and five, with one-sigma uncertainty"></svg></div><p class="caption">Vertical axis: 2.8%–3.2%, enlarged to show the difference. Error bars: reported 1σ statistical and fit uncertainty. Points are fitted estimates, not new simulations.</p><div id="scaling-result" class="result" aria-live="polite"></div>
+   <p class="source-note">Source: Google Quantum AI, <a href="https://doi.org/10.1038/s41586-022-05434-1" target="_blank" rel="noopener">“Suppressing quantum errors by scaling a surface code logical qubit,” <em>Nature</em> 614, 676–681 (2023)</a>, Fig. 3 and main text. DOI: 10.1038/s41586-022-05434-1. The data are included in this offline page; only opening the paper needs internet.</p>
+   <div class="model-box"><strong>Keep the metric clear</strong><p>These experimental values are fitted logical errors <em>per cycle</em>, averaged over the tested logical X and Z memories. The theorem above concerns a complete memory experiment under its stated model. Do not substitute one metric for the other, or infer a universal threshold from two code distances.</p></div>
+   <div class="concept"><h4>Reliable storage, with stated assumptions.</h4><p>The threshold depends on the noise model, decoder and experiment. It does not promise success on every finite-distance shot. This is a quantum-memory result; fault-tolerant logical gates are a later topic. The theorem is stated without proof here. Source: Dennis et al. (2002), <em>Topological quantum memory</em>.</p></div>
+  </div>
+ </section>
+
+ <section id="circuits" class="lesson section-anchor optional-section"><details><summary>Optional reference · faults inside the check circuit (for a later week)</summary>
+  <div class="section-heading"><span class="section-number">+</span><div><span class="eyebrow">OPTIONAL EXTENSION · AFTER THE COMPLETE RECOVERY CYCLE</span><h2>A parity meter can spread a fault.</h2></div></div>
+  <p class="hint">The core lesson is complete. This extension introduces faults inside the gates, a separate topic that can be saved for a later week.</p><p class="lead">An ancilla collects a joint check value. Its CNOT direction matters: the ancilla is the <strong>target for a Z check</strong> and the <strong>control for an X check</strong>. A fault on that shared ancilla can reach several data qubits.</p>
+  <div class="lab"><div class="lab-heading"><div><span class="eyebrow">FURTHER STUDY</span><h3>Move the fault along the check circuit.</h3></div><button id="circuit-reset" class="reset">Reset</button></div>
+   <div class="control-line"><div class="segmented" aria-label="Check circuit"><button data-circuit="X">X check Sˣ₁</button><button data-circuit="Z">Z check Sᶻ₁</button></div><div class="segmented" aria-label="CNOT order"><button data-order="rows">Visit by rows</button><button data-order="columns">Visit by columns</button></div></div>
+   <div id="circuit-support" class="formula"></div><div class="control-line"><label><input id="hook-enabled" type="checkbox" checked> Inject the propagating ancilla fault</label><span id="hook-type" class="tag"></span></div>
+   <p class="hint">Click a numbered marker to place the fault after that many CNOTs. Orange gates are the later gates through which it spreads. All four data wires continue; the measured ancilla ends at MZ.</p>
+   <div class="circuit-wrap"><svg id="hook-circuit" viewBox="0 0 1040 430" role="group" aria-label="Interactive check-extraction circuit with selectable ancilla fault location"></svg></div>
+   <div id="hook-result" class="result" aria-live="polite"></div><div class="two-col compact"><div><h4>Where did the data fault land?</h4><div class="diagram small-patch"><svg id="hook-patch" viewBox="0 0 560 470" role="img" aria-label="Propagated data errors on the physical patch"></svg></div></div><div><h4>Why the direction matters</h4><div id="propagation-formula" class="formula"></div><p id="hook-explanation"></p><div id="hook-orientation" class="result"></div></div></div>
+   <div class="concept"><h4>Read a check, preserve its logical amplitudes.</h4><p>For an incoming check eigenstate S|ψ⟩ = σ|ψ⟩, the ideal circuit gives <strong>σ = +1 → bit 0</strong> and <strong>σ = −1 → bit 1</strong>. The circuit above starts in the code space, so its ideal bit is 0. The selected propagating ancilla fault can leave that very report unchanged while corrupting data; other checks can detect the damage.</p><p>Changing the gate order changes the hook’s orientation. A complete fault-tolerant schedule must also coordinate neighboring checks and avoid gate collisions.</p></div>
+  </div>
+ </details>
+ </section>
+
+ <footer><div><strong>AIAA3072 · Week 12</strong><p>Surface Codes and Spacetime Decoding<br>Offline self-study companion · 20 November 2026</p></div><div><a href="#overview">Back to the beginning ↑</a><p>No accounts, external libraries, or network requests.<br>Lecture-note files are not included.</p></div></footer>
+</main><noscript><p class="noscript">Enable JavaScript to use the interactive diagrams and check your answers.</p></noscript>
+</body></html>

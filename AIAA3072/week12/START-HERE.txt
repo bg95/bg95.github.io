@@ -1,0 +1,60 @@
+AIAA3072 — Week 12: Surface Codes and Spacetime Decoding
+
+1. Extract the whole ZIP into a new folder.
+2. Open index.html in a modern browser.
+3. Follow the eight learning sections, ending with the threshold result.
+
+No server, installation, account, or internet connection is needed.
+Keep the six files together. This is a separate Week 12 webpage;
+it does not require Week 11 files. No lecture-note PDF or source is included.
+
+Experiments 01 and 02 introduce the local checks and the general Pauli-check circuit.
+Click the dashed time lines directly on the measurement circuit to inspect its states.
+Experiment 03A shows why one qubit fault is an edge joining the checks it flips.
+Move the fault on the same nine-qubit patch and compare X and Z errors.
+In 03B, each physical qubit cycles I -> X -> Y -> Z -> I; both check families respond.
+The syndrome-graph view shows the Z component (Z and Y sites). Clicking an edge
+toggles only that component. Use "Decode this error" to carry the pattern into 04A.
+
+Experiment 04A accepts any Pauli error on all nine qubits. Cycle each qubit or
+choose an I/X/Y/Z brush. The eight check bits, minimum-weight correction, physical
+gates and residual update together. The visible three-step algorithm uses only
+the syndrome to choose a correction. In 04B, click a same-syndrome example to
+change that same figure while keeping the decoder's correction. Compare harmless
+stabilizers with logical X, Y and Z failures. All single-qubit errors recover;
+multiple errors may change the logical message despite clearing the checks.
+Use the message sliders and cycle diagram to inspect input and recovered states.
+Editing an error preserves the selected timeline stage.
+
+Experiment 04C introduces the general matching idea using a separate five-edge
+strip. Click its five qubit circles to change any error pattern. The error,
+correction and residual rows stay visible together; there are no row-selector
+buttons. Open circles identify data qubits consistently across the drawings.
+
+In Experiment 05, click the graph directly. A qubit circle or horizontal edge
+toggles a new Z fault before that round; I means no new fault. A vertical edge
+or its OK/flip marker toggles a wrong check report in the labelled round.
+The record and detection events update immediately. All four example presets
+remain available. "Decode this history" sends the same faults to Experiment 06.
+In Experiment 06, toggle any of ten data or report faults, and adjust the
+assumed error rates. The measured record, matching paths, correction gates
+and logical recovery result update together. On desktop, the fault controls
+stay available while inspecting recovery. The small graph searches all
+endpoint pairings exactly. Its final check round preserves the quantum data. Click any candidate path to inspect
+its physical correction, without changing the decoder’s selected minimum.
+Faults inside the extraction circuit are an optional extension after the core
+decoding lesson, collapsed by default.
+
+All diagram buttons support Tab and Enter/Space. Wide graphs, circuits and tables
+scroll sideways on smaller screens. Desktop text is larger than phone text.
+Progress stays in local browser storage; nothing is sent anywhere.
+
+The final topic states the positive memory-threshold result without proof.
+Experiment 08 uses published fitted logical errors per cycle, including
+reported 1-sigma uncertainties, from Google Quantum AI, Nature 614 (2023),
+676-681, DOI: 10.1038/s41586-022-05434-1, Fig. 3 and main text.
+Switch between the reported tensor-network and belief-matching decoders.
+All values are included offline; opening the source-paper link needs internet.
+Each experiment states its modeling assumptions.
+
+Revised 20 November 2026.
