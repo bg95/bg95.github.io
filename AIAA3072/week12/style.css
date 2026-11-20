@@ -90,3 +90,12 @@ svg text{fill:var(--ink)}.boundary{fill:none;stroke-width:4;stroke-linecap:round
 
 .spacetime-diagram .boundary-node{fill:#eef0f5;stroke:#626c7d}
 #matching-graph .fault-site{font-size:23px}#matching-graph .qubit-label{font-size:24px}#matching-graph .matching-cost{paint-order:stroke;stroke:white;stroke-width:4px;stroke-linejoin:round}
+
+/* Actual faults stay editable while inference is shown on a separate rail. */
+.decoder-rail{stroke:#087b77;stroke-width:4;stroke-linecap:round;pointer-events:none}.decoder-rail.preview-rail{stroke:#7765ba}
+#matching-graph .matching-link,#matching-graph .matching-cost{pointer-events:none}
+#matching-graph .report-state{font-size:24px}#matching-graph .detector-bit{font-size:22px}
+#matching-path-key{color:#087b77;font-weight:600}
+
+/* Match Week 11's 90% desktop scale; preserve the existing mobile layout. */
+@media screen and (min-width:1001px){body{zoom:.9}.sidebar{height:calc(100vh / .9)}}

@@ -36,17 +36,21 @@ toggles a new Z fault before that round; I means no new fault. A vertical edge
 or its OK/flip marker toggles a wrong check report in the labelled round.
 The record and detection events update immediately. All four example presets
 remain available. "Decode this history" sends the same faults to Experiment 06.
-In Experiment 06, toggle any of ten data or report faults, and adjust the
-assumed error rates. The measured record, matching paths, correction gates
-and logical recovery result update together. On desktop, the fault controls
-stay available while inspecting recovery. The small graph searches all
-endpoint pairings exactly. Its final check round preserves the quantum data. Click any candidate path to inspect
-its physical correction, without changing the decoder’s selected minimum.
+In Experiment 06, click the same qubit circles or report markers directly on
+the graph. All ten locations remain editable in every graph view; the presets
+and assumed error rates remain available. Orange shows the faults you set;
+green rails show the decoder's inferred paths. The measured record, matching,
+correction gates and logical recovery result update together. Editing a fault
+keeps the selected view and rates. The small graph searches all endpoint pairings
+exactly. Its final check round preserves the quantum data. Click any candidate
+path to preview its violet rails and physical correction without changing the
+decoder's selected minimum.
 Faults inside the extraction circuit are an optional extension after the core
 decoding lesson, collapsed by default.
 
 All diagram buttons support Tab and Enter/Space. Wide graphs, circuits and tables
-scroll sideways on smaller screens. Desktop text is larger than phone text.
+scroll sideways on smaller screens. Desktop uses a 90% page scale, like Week 11;
+mobile sizing is unchanged.
 Progress stays in local browser storage; nothing is sent anywhere.
 
 The final topic states the positive memory-threshold result without proof.

@@ -137,18 +137,22 @@
   return `<circle class="fault-marker-hit" cx="${x}" cy="${y}" r="32"/><circle class="data-qubit fault-qubit ${letter==='I'?'':tone}" cx="${x}" cy="${y}" r="22"/>`+txt(x,y+7,letter,'class="qubit-label" text-anchor="middle"')+(site?txt(x,y+42,'q'+sub(site),'class="fault-site" text-anchor="middle"'):'');
  }
  const nodeXY=[[250,95],[505,95],[250,250],[505,250],[250,405],[505,405],[80,95],[675,95],[80,250],[675,250]];
- function spacetime({events,highlight=0,mode='paths',connections=[],weights=null,frameOnly=false,faults=null,editable=false}){
+ function spacetime({events,highlight=0,mode='paths',connections=[],weights=null,frameOnly=false,faults=null,editable=false,editScope='history',showInference=false,preview=false}){
   const editing=faults!==null;
   let s=txt(18,55,'TIME ↓','class="small-svg"')+txt(375,25,'SPACE →','class="axis-label" text-anchor="middle"')+txt(250,55,'a = Sˣ₃','class="node-heading" text-anchor="middle"')+txt(505,55,'b = Sˣ₁','class="node-heading" text-anchor="middle"');
   [95,250,405].forEach((y,i)=>s+=txt(50,y+6,`t=${i+1}`,'class="axis-label" text-anchor="end"'));
-  Q.edges.forEach((e,i)=>{const [x1,y1]=nodeXY[e.u],[x2,y2]=nodeXY[e.v],hot=Boolean((editing?faults:highlight)&(1<<i))&&(!frameOnly||e.type==='data'),x=(x1+x2)/2,y=(y1+y2)/2;
-   let body=(editable?`<path class="fault-hit" d="M${x1} ${y1}L${x2} ${y2}"/>`:'')+`<line class="graph-edge ${hot?(editing?'actual-fault':'inferred'):''} ${mode==='graph'?'faint':''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
-   if(mode!=='graph'){
+  Q.edges.forEach((e,i)=>{const [x1,y1]=nodeXY[e.u],[x2,y2]=nodeXY[e.v],hot=Boolean((editing?faults:highlight)&(1<<i))&&(editing||!frameOnly||e.type==='data'),x=(x1+x2)/2,y=(y1+y2)/2;
+   let body=(editable?`<path class="fault-hit" d="M${x1} ${y1}L${x2} ${y2}"/>`:'')+`<line class="graph-edge ${hot?(editing?'actual-fault':'inferred'):''} ${mode==='graph'&&!editing?'faint':''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+   if(showInference&&mode!=='graph'&&(highlight&(1<<i))&&(!frameOnly||e.type==='data')){
+    const dx=e.type==='report'?-10:0,dy=e.type==='data'?10:0;
+    body+=`<line class="decoder-rail ${preview?'preview-rail':''}" data-inferred-edge="${i}" x1="${x1+dx}" y1="${y1+dy}" x2="${x2+dx}" y2="${y2+dy}"/>`;
+   }
+   if(mode!=='graph'||editable){
     if(e.type==='data')body+=faultQubit(x,y,hot?'Z':'I',Q.sites[e.q],editing?'error':'correction-symbol');
     else body+=`<rect class="report-marker ${hot?(editing?'applied':'inferred'):''}" x="${x-29}" y="${y-18}" width="58" height="36" rx="4"/>`+txt(x,y+6,editing?(hot?'flip':'OK'):'report','class="report-state" text-anchor="middle"')+(editing?txt(x,y+39,(e.check?'b':'a')+' report · t'+sub(e.t),'class="fault-site" text-anchor="middle"'):'');
    }
    const label=e.type==='data'?`Toggle Z fault on q${Q.sites[e.q]} before round ${e.t}`:`Toggle wrong ${e.check?'b':'a'} report in round ${e.t}`;
-   s+=editable?svgButton(`class="fault-target" data-history-fault="${i}" data-focus-key="history-${i}" data-fault-type="${e.type}" aria-pressed="${hot}"`,body,label):body;
+   s+=editable?svgButton(`class="fault-target" data-${editScope}-fault="${i}" data-focus-key="${editScope}-${i}" data-fault-type="${e.type}" aria-pressed="${hot}"`,body,label):body;
   });
   if(mode==='graph'||mode==='all')connections.forEach((c,i)=>{
    const [x1,y1]=nodeXY[c.from],[x2,y2]=nodeXY[c.to];
@@ -179,18 +183,18 @@
  function renderMatching(){
   const pd=+$('data-rate').value/100,pm=+$('report-rate').value/100,h=Q.history(matchingFaults),m=Q.matching(h.events,pd,pm),all=Q.enumerate(h.events,pd,pm),ties=all.filter(x=>Math.abs(x.cost-m.cost)<1e-8),classes=new Set(ties.map(x=>Q.classify(0,x.correction^h.frame)));
   select('[data-shot]','shot',shot);select('[data-matching-view]','matchingView',matchingView);
-  $('matching-fault-controls').innerHTML=[1,2].map(t=>`<div class="fault-round"><strong>Round ${t}</strong>${Q.edges.map((e,i)=>e.t!==t?'':`<button data-matching-fault="${i}" data-focus-key="matching-fault-${i}" class="${matchingFaults&(1<<i)?'selected fault-selected':''}" aria-pressed="${Boolean(matchingFaults&(1<<i))}">${e.type==='data'?'Z'+sub(Q.sites[e.q]):'Wrong '+(e.check?'b':'a')+' report'}</button>`).join('')}</div>`).join('');
   $('data-rate-value').textContent=percent(pd);$('report-rate-value').textContent=percent(pm);$('weights').innerHTML=`w<sub>d</sub> = ${f(Q.weight(pd))}, &nbsp; w<sub>m</sub> = ${f(Q.weight(pm))}`;
   const eventNames=Q.nodes.slice(0,6).filter((_,i)=>h.events&(1<<i));
   $('matching-evidence').innerHTML=`<span>Observed changes D = </span>${eventNames.length?'{'+eventNames.join(', ')+'}':'∅'}`;
   $('matching-record').innerHTML=`<table><caption>Measured record s(t) → adjacent changes δ(t)</caption><thead><tr><th>Check</th><th>s₀</th><th>s₁</th><th>s₂</th><th>s₃</th><th>δ₁ δ₂ δ₃</th></tr></thead><tbody>${[0,1].map(j=>`<tr><th>${j?'b':'a'}</th>${h.reports.map(bs=>`<td>${bs[j]}</td>`).join('')}<td class="event-row">${h.deltas.slice(1).map(bs=>bs[j]).join(' ')}</td></tr>`).join('')}</tbody></table>`;
-  $('matching-graph').innerHTML=spacetime({events:h.events,highlight:candidatePreview??m.edgeMask,mode:candidatePreview!==null?'paths':matchingView,connections:m.connections,frameOnly:candidatePreview===null&&matchingView==='frame'});
+  $('matching-graph').innerHTML=spacetime({events:h.events,faults:matchingFaults,editable:true,editScope:'matching',showInference:true,preview:candidatePreview!==null,highlight:candidatePreview??m.edgeMask,mode:candidatePreview!==null?'paths':matchingView,connections:m.connections,frameOnly:candidatePreview===null&&matchingView==='frame'});
+  $('matching-path-key').textContent=candidatePreview!==null?'Violet rails preview the selected candidate. The decoder’s chosen correction remains on the right.':matchingView==='graph'?'Purple arcs pair the observed events; labels give path costs.':matchingView==='frame'?'Green rails mark only the data edges used for correction. Actual report faults remain editable.':matchingView==='paths'?'Green rails mark the decoder’s chosen fault paths.':'Purple arcs pair events; green rails show the chosen fault paths. Labels give path costs.';
   $('matching-connections').innerHTML=m.connections.length?m.connections.map(c=>`<div><strong>${Q.nodes[c.from]} ↔ ${c.to>=6?(c.to%2?'right':'left')+' boundary':Q.nodes[c.to]}</strong><span>cost ${f(c.cost)}</span></div>`).join(''):'<p>No events: no connections are needed.</p>';
   $('matching-expanded').textContent=faultList(m.edgeMask);
   result('matching-result',`<strong>Minimum total cost: ${f(m.cost)}</strong><div class="formula">Data correction C = ${op(m.correction)}</div>Report-fault edges add no data gate. ${classes.size>1?'<strong class="tie">Logically different corrections tie; one minimum is shown.</strong>':ties.length>1?'Several minimum-cost histories give the same logical class.':''}`,'good');
   const candidates=all.slice(0,4);
   $('matching-candidates').innerHTML=candidates.map(c=>`<tr class="${Math.abs(c.cost-m.cost)<1e-8?'optimal':''}"><td><button class="candidate-button" data-candidate="${c.faults}" aria-pressed="${candidatePreview===c.faults}">${faultList(c.faults)}</button>${Math.abs(c.cost-m.cost)<1e-8?' <span class="tag">minimum</span>':''}</td><td>${f(c.cost)}</td><td>${op(c.correction)}</td></tr>`).join('');
-  $('candidate-preview').hidden=candidatePreview===null;if(candidatePreview!==null)result('candidate-preview',`<strong>Alternative path preview</strong><div class="formula">Physical correction = ${op(Q.frame(candidatePreview))}</div>The decoder’s chosen correction and recovery remain visible below.`);
+  $('candidate-preview').hidden=candidatePreview===null;if(candidatePreview!==null)result('candidate-preview',`<strong>Alternative path preview</strong><div class="formula">Physical correction = ${op(Q.frame(candidatePreview))}</div>The decoder’s chosen correction and recovery are unchanged.`);
   const residual=m.correction^h.frame,ok=Q.classify(0,residual)==='I';
   let circuit=txt(140,27,'Actual E','class="meter-label" text-anchor="middle"')+txt(280,27,'Apply C','class="meter-label" text-anchor="middle"')+txt(410,27,'Residual CE','class="meter-label" text-anchor="middle"');
   [0,1,2].forEach(i=>{const y=70+i*65;circuit+=txt(38,y+6,'q'+sub(Q.sites[i]),'class="meter-label" text-anchor="end"')+`<path class="meter-quantum" d="M48 ${y}H465"/>`;
@@ -199,7 +203,7 @@
    circuit+=faultQubit(410,y,residual&(1<<i)?'Z':'I',null,'residual-symbol');});
   $('matching-recovery').innerHTML=circuit;
   result('shot-verdict',`<div class="formula">E<sub>final</sub> = ${op(h.frame)} &nbsp; → &nbsp; CE<sub>final</sub> = ${op(residual)}</div><strong>${ok?'Recovery succeeds: the logical state is restored.':'Recovery fails: a logical Z remains.'}</strong> The final checks are clear in both cases. The decoder used the record and weights, not the actual faults shown in orange.`,ok?'good':'warning');
-  bind('[data-matching-fault]',el=>{matchingFaults^=1<<+el.dataset.matchingFault;shot='custom';candidatePreview=null;mark('matching');renderMatching();});
+  bind('#matching-graph [data-matching-fault]',el=>{matchingFaults^=1<<+el.dataset.matchingFault;shot='custom';candidatePreview=null;mark('matching');renderMatching();});
   bind('[data-candidate]',el=>{candidatePreview=+el.dataset.candidate;mark('matching');renderMatching();});
  }
  bind('[data-shot]',el=>{shot=el.dataset.shot;matchingFaults=shot==='A'?129:shot==='B'?66:0;candidatePreview=null;if(shot!=='clear'){$('data-rate').value=shot==='A'?1:10;$('report-rate').value=shot==='A'?10:1;}mark('matching');renderMatching();});

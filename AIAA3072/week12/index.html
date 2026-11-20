@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Week 12 · Surface Codes & Recovery</title><meta name="description" content="An offline self-study lab on local quantum checks, error chains, noisy syndrome histories, and matching decoders.">
-<meta name="theme-color" content="#282b5a"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261120-graph">
-<script defer src="engine.js?v=20261120-graph"></script><script defer src="app.js?v=20261120-graph"></script>
+<meta name="theme-color" content="#282b5a"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261120-desktop90">
+<script defer src="engine.js?v=20261120-matching"></script><script defer src="app.js?v=20261120-matching"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to lesson</a>
@@ -135,15 +135,15 @@
   <p class="lead">The decoder receives the detection events and a noise model. It connects events to each other or to permitted spatial boundaries. Every event must be accounted for. A time-like edge explains a wrong report and adds <strong>no data correction</strong>.</p>
   <div class="lab"><div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 06</span><h3>Edit the faults. Follow the recovery live.</h3></div><button id="matching-reset" class="reset">Reset</button></div>
    <div class="segmented wrap" aria-label="Decoding example"><button data-shot="A">Example A · three events</button><button data-shot="B">Example B · recalibration</button><button data-shot="clear">Clear faults</button></div>
-   <p class="hint">Same model as Experiment 05: only top-row Z faults, two noisy rounds, then ideal nondestructive checks. The data remain available for correction.</p><div class="fault-editor"><div class="fault-editor-title"><h4>1. Set the actual faults</h4><span>Click to toggle · orange = applied</span></div><div id="matching-fault-controls"></div></div>
+   <p class="hint">Same model as Experiment 05: only top-row Z faults, two noisy rounds, then ideal nondestructive checks. Click a qubit or horizontal edge to toggle a data fault; click an OK / flip marker or vertical edge to toggle a wrong report. I means no new fault in that round.</p>
    <div class="state-controls matching-rates"><label for="data-rate">Assumed data-fault probability p<sub>d</sub><output id="data-rate-value"></output><input id="data-rate" type="range" min="0.5" max="20" step="0.5" value="1"></label><label for="report-rate">Assumed report-fault probability p<sub>m</sub><output id="report-rate-value"></output><input id="report-rate" type="range" min="0.5" max="30" step="0.5" value="10"></label></div>
    <div class="matching-live">
-    <div><h4>2. Read the syndrome; connect its changes</h4><div id="matching-record" class="table-wrap"></div><div id="matching-evidence" class="syndrome" aria-live="polite"></div>
+    <div><h4>1. Edit the faults; inspect the evidence</h4>
      <div class="segmented wrap view-tabs" aria-label="Matching diagram view"><button data-matching-view="all">All steps</button><button data-matching-view="graph">Pair endpoints</button><button data-matching-view="paths">Expand paths</button><button data-matching-view="frame">Data edges</button></div>
-     <div class="diagram"><svg class="spacetime-diagram" id="matching-graph" viewBox="0 0 760 460" role="img" aria-label="Observed changes, matched endpoints, and expanded correction paths"></svg></div>
-     <p class="caption">Purple = matched endpoints; green = chosen fault paths. Open I/Z circles = data-qubit locations on fault edges; smaller filled nodes = checks a = Sˣ₃, b = Sˣ₁ at each round. Red = changed report. L / R squares = rough boundaries. Horizontal edges = data faults; vertical edges = report faults. Round 3 is ideal closure.</p>
+     <div class="diagram"><svg class="spacetime-diagram" id="matching-graph" viewBox="0 0 760 460" role="group" aria-label="Edit actual data and report faults while viewing the decoder paths"></svg></div>
+     <p class="caption">I/Z circles, OK/flip markers and orange edges show the <strong>actual faults you set</strong>. Red filled nodes are detection events; L/R squares are rough boundaries. Round 3 is ideal closure.</p><p id="matching-path-key" class="caption"></p><div id="matching-evidence" class="syndrome" aria-live="polite"></div><div id="matching-record" class="table-wrap"></div>
     </div>
-    <div><h4>3. Expand the paths; apply the data gates</h4><div id="matching-connections" class="connection-list"></div><p id="matching-expanded" class="expanded-paths"></p><div id="matching-result" class="result" aria-live="polite"></div>
+    <div><h4>2. Decode the syndrome; recover the data</h4><div id="matching-connections" class="connection-list"></div><p id="matching-expanded" class="expanded-paths"></p><div id="matching-result" class="result" aria-live="polite"></div>
      <div class="diagram"><svg id="matching-recovery" viewBox="0 0 490 240" role="img" aria-label="Actual data error, physical correction gates, and residual on each qubit"></svg></div><div id="shot-verdict" class="result" aria-live="polite"></div>
     </div>
    </div>
