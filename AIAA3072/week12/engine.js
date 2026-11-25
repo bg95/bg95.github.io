@@ -96,13 +96,18 @@
   }
   function hook(type,order,after){return {x:type==='X'?mask(order.slice(after)):0,z:type==='Z'?mask(order.slice(after)):0};}
   // The checkerboard and edge drawings are two embeddings of this same code.
-  // Keep n <= 25 so all Pauli supports fit exactly in positive 32-bit masks.
-  function rotatedPatch(d=5){
-    if(![3,5].includes(d))throw new Error('Supported rotated patch sizes are 3 and 5.');
+  // BigInt preserves every site of the 49-qubit playground; the other labs
+  // retain their independent nine-qubit Number masks.
+  function rotatedPatch(d=7){
+    if(![3,5,7].includes(d))throw new Error('Supported rotated patch sizes are 3, 5 and 7.');
+    const bit=i=>1n<<BigInt(i),patchMask=indices=>indices.reduce((m,i)=>m|bit(i),0n);
+    const patchPop=m=>{let n=0;for(;m;m&=m-1n)n++;return n;},patchParity=m=>patchPop(m)%2;
+    const patchPauli=(x,z,i)=>(x&bit(i))?((z&bit(i))?'Y':'X'):((z&bit(i))?'Z':'I');
+    const setPauli=(x,z,i,letter)=>({x:(x&~bit(i))|('XY'.includes(letter)?bit(i):0n),z:(z&~bit(i))|('ZY'.includes(letter)?bit(i):0n)});
     const labels=Array.from({length:d*d},(_,i)=>`${1+Math.floor(i/d)}${1+i%d}`),checks=[];
     function add(type,r,c,qubits,side=''){
       const index=checks.filter(s=>s.type===type).length;
-      checks.push({type,index,id:type+(index+1),r,c,qubits,mask:mask(qubits),side,cx:c+.5,cy:r+.5});
+      checks.push({type,index,id:type+(index+1),r,c,qubits,mask:patchMask(qubits),side,cx:c+.5,cy:r+.5});
     }
     for(let r=0;r<d-1;r++)for(let c=0;c<d-1;c++)add((r+c)%2?'X':'Z',r,c,[r*d+c,r*d+c+1,(r+1)*d+c,(r+1)*d+c+1]);
     for(let c=0;c<d-1;c+=2)add('X',-1,c,[c,c+1],'top');
@@ -126,9 +131,15 @@
       return {id:s.id,check:s.index,qubits:s.qubits,polygon};
     });
     const X=xs.map(s=>s.mask),Z=zs.map(s=>s.mask);
-    return {d,sites:labels,checks,X,Z,vertices,edges:latticeEdges,faces,
-      LX:mask(Array.from({length:d},(_,r)=>r*d)),LZ:mask(Array.from({length:d},(_,c)=>c)),
-      syndrome:(x,z)=>({X:syndrome(z,X),Z:syndrome(x,Z)})};
+    const LX=patchMask(Array.from({length:d},(_,r)=>r*d)),LZ=patchMask(Array.from({length:d},(_,c)=>c));
+    const patchSyndrome=(x,z)=>({X:X.map(s=>patchParity(z&s)),Z:Z.map(s=>patchParity(x&s))});
+    const logicalAction=(x,z)=>{
+      const s=patchSyndrome(x,z);if([...s.X,...s.Z].some(Boolean))return null;
+      const a=patchParity(x&LZ),b=patchParity(z&LX);return a?(b?'Y':'X'):(b?'Z':'I');
+    };
+    return {d,sites:labels,checks,X,Z,vertices,edges:latticeEdges,faces,LX,LZ,
+      bit,mask:patchMask,pop:patchPop,parity:patchParity,pauliAt:patchPauli,setPauli,
+      syndrome:patchSyndrome,logicalAction};
   }
   const api={sites,mask,X,Z,LX,LZ,pop,parity,syndrome,support,span,classify,decodeSyndrome,nodes,edges,boundary,frame,history,weight,matching,enumerate,hook,rotatedPatch};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.Surface=api;

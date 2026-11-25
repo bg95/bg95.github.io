@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Week 12 · Surface Codes & Recovery</title><meta name="description" content="An offline self-study lab on local quantum checks, error chains, noisy syndrome histories, and matching decoders.">
-<meta name="theme-color" content="#282b5a"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261125-playground">
-<script defer src="engine.js?v=20261125-playground"></script><script defer src="app.js?v=20261125-playground"></script>
+<meta name="theme-color" content="#282b5a"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css?v=20261125-7x7">
+<script defer src="engine.js?v=20261125-7x7"></script><script defer src="app.js?v=20261125-7x7"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to lesson</a>
@@ -12,7 +12,7 @@
  <a class="brand" href="#overview"><span class="brand-symbol">ψ</span><span>AIAA3072<small>THE INTERACTIVE NOTES</small></span></a>
  <div class="course-label">WEEK 12 · SELF-STUDY LAB</div>
  <nav aria-label="Lesson sections">
- <a href="#overview" class="active"><span>00</span>The big picture</a><a href="#patch"><span>01</span>Read a local patch</a><a href="#measure"><span>02</span>The general check circuit</a><a href="#chains"><span>03</span>Errors and syndrome graphs</a><a href="#playground" class="nav-subsection"><span>03C</span>5×5 code playground</a><a href="#logical"><span>04</span>Decode & recover</a><a href="#time"><span>05</span>When reports can be wrong</a><a href="#matching"><span>06</span>Decode a noisy history</a><a href="#practice"><span>07</span>Check your understanding</a><a href="#scaling"><span>08</span>The threshold result</a><a href="#circuits"><span>+</span>Further study: faulty gates</a>
+ <a href="#overview" class="active"><span>00</span>The big picture</a><a href="#patch"><span>01</span>Read a local patch</a><a href="#measure"><span>02</span>The general check circuit</a><a href="#chains"><span>03</span>Errors and syndrome graphs</a><a href="#playground" class="nav-subsection"><span>03C</span>7×7 code playground</a><a href="#logical"><span>04</span>Decode & recover</a><a href="#time"><span>05</span>When reports can be wrong</a><a href="#matching"><span>06</span>Decode a noisy history</a><a href="#practice"><span>07</span>Check your understanding</a><a href="#scaling"><span>08</span>The threshold result</a><a href="#circuits"><span>+</span>Further study: faulty gates</a>
  </nav>
  <div class="side-bottom"><div class="progress-label"><span>Your exploration</span><span id="progress-text">0 / 8</span></div><div class="progress-track"><span id="progress-fill"></span></div><p>Progress stays in this browser.</p><button class="text-button" id="reset-progress">Reset progress</button></div>
 </aside>
@@ -74,18 +74,19 @@
    <p class="try"><strong>Try this:</strong> start from Z₂₂, cycle q₁₂ to Z, and watch the shared Sˣ₁ defect disappear. Then compare the full top row with Sᶻ₁: both have zero syndrome, but only one is harmless.</p>
   </div>
   <div id="playground" class="lab large-playground section-anchor">
-   <div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 03C · A LARGER CODE</span><h3>5 × 5 playground: one code, two drawings.</h3></div><button id="playground-clear" class="reset">Clear errors</button></div>
-   <p class="playground-intro"><strong>25 data qubits · 24 checks · one logical qubit.</strong> Click a qubit in either view: <strong>I → X → Y → Z → I</strong>. Both views show the same error and syndrome.</p>
-   <div class="preset-row"><span>Try an example</span><button data-playground-preset="center">Y₃₃</button><button data-playground-preset="pair">Z₃₃Z₃₄</button><button data-playground-preset="logical">Top-row Z string</button></div>
+   <div class="lab-heading"><div><span class="eyebrow">EXPERIMENT 03C · A LARGER CODE</span><h3>7 × 7 playground: one code, two drawings.</h3></div><button id="playground-clear" class="reset">Clear errors</button></div>
+   <p class="playground-intro"><strong>49 data qubits · 48 checks · one logical qubit.</strong> Click a qubit in either view: <strong>I → X → Y → Z → I</strong>. Both views show the same error and syndrome.</p>
+   <div class="preset-row"><span>Try an example</span><button data-playground-preset="center">Y₄₄</button><button data-playground-preset="pair">Z₄₄Z₄₅</button><button data-playground-preset="logical">Top-row Z string</button></div>
    <div class="playground-legend"><span><i class="play-key-x"></i>X check · flags for odd Z/Y overlap</span><span><i class="play-key-z"></i>Z check · flags for odd X/Y overlap</span><span><i class="play-key-flag">1</i>Flagged: bit 1, eigenvalue −1</span></div>
    <div class="playground-views">
-    <div class="playground-view"><h4>Qubits on nodes</h4><p class="caption">X and Z checks occupy faces.</p><div class="diagram"><svg id="playground-node" viewBox="0 0 660 660" role="group" aria-label="5 by 5 rotated code: edit node qubits and inspect face checks"></svg></div></div>
-    <div class="playground-view"><h4>Qubits on edges</h4><p class="caption">X checks occupy nodes; Z checks occupy faces.</p><div class="diagram"><svg id="playground-edge" viewBox="0 0 660 660" role="group" aria-label="The same 25 qubits on edges: edit errors and inspect node or face checks"></svg></div></div>
+    <div class="playground-view"><h4>Qubits on nodes</h4><p class="caption">X and Z checks occupy faces.</p><div class="diagram"><svg id="playground-node" viewBox="0 0 860 860" role="group" aria-label="7 by 7 rotated code: edit node qubits and inspect face checks"></svg></div></div>
+    <div class="playground-view"><h4>Qubits on edges</h4><p class="caption">X checks occupy nodes; Z checks occupy faces.</p><div class="diagram"><svg id="playground-edge" viewBox="0 0 860 860" role="group" aria-label="The same 49 qubits on edges: edit errors and inspect node or face checks"></svg></div></div>
    </div>
    <div id="playground-status" class="playground-status" aria-live="polite"></div>
+   <div id="playground-logical" class="playground-logical" aria-live="polite" hidden></div>
    <div id="playground-inspector" class="playground-inspector" aria-live="polite"></div>
    <p class="caption playground-note">The labels identify the same qubits and checks in both views. Select a check to highlight its qubits. Gray boundary endpoints are unmeasured; dashed boundary segments carry no qubit. Unflagged checks have bit 0 and eigenvalue +1.</p>
-   <p class="caption playground-source">These are equivalent drawings of the rotated [[25, 1, 5]] surface code; see <a href="https://arxiv.org/pdf/1812.08186#page=4" target="_blank" rel="noopener">Tuckett et al., Fig. 4</a>. All interactions work offline.</p>
+   <p class="caption playground-source">These are equivalent drawings of the rotated [[49, 1, 7]] surface code. Drawing convention adapted from <a href="https://arxiv.org/pdf/1812.08186#page=4" target="_blank" rel="noopener">Tuckett et al., Fig. 4</a>. All interactions work offline.</p>
   </div>
  </section>
 

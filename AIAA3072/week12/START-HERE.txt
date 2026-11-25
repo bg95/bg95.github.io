@@ -16,13 +16,16 @@ In 03B, each physical qubit cycles I -> X -> Y -> Z -> I; both check families re
 The syndrome-graph view shows the Z component (Z and Y sites). Clicking an edge
 toggles only that component. Use "Decode this error" to carry the pattern into 04A.
 
-Experiment 03C is a 5x5 playground with two synchronized drawings of the same
-25-qubit code. The left puts qubits on nodes and checks in faces; the right puts
+Experiment 03C is a 7x7 playground with two synchronized drawings of the same
+49-qubit code. The left puts qubits on nodes and checks in faces; the right puts
 qubits on edges, X checks on nodes and Z checks in faces. Click a qubit in either
 view to cycle I -> X -> Y -> Z -> I. Every flagged check turns red and displays
 bit 1 in both views. Click a check to highlight its qubits and see its operator
-and measured outcome. Clear errors and the three example presets are available.
-The sidebar links directly to "5x5 code playground". On a phone, the drawings
+and measured outcome. Whenever all checks pass, the readout names the logical
+action I, X, Y or Z. Logical I means the code state is unaffected, including
+when the physical error is a nontrivial stabilizer.
+Clear errors and the three example presets are available.
+The sidebar links directly to "7x7 code playground". On a phone, the drawings
 stack and each can scroll sideways. The new section works entirely offline.
 
 Experiment 04A accepts any Pauli error on all nine qubits. Cycle each qubit or
