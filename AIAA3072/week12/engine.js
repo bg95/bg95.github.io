@@ -95,6 +95,41 @@
     return out.sort((a,b)=>a.cost-b.cost||a.faults-b.faults);
   }
   function hook(type,order,after){return {x:type==='X'?mask(order.slice(after)):0,z:type==='Z'?mask(order.slice(after)):0};}
-  const api={sites,mask,X,Z,LX,LZ,pop,parity,syndrome,support,span,classify,decodeSyndrome,nodes,edges,boundary,frame,history,weight,matching,enumerate,hook};
+  // The checkerboard and edge drawings are two embeddings of this same code.
+  // Keep n <= 25 so all Pauli supports fit exactly in positive 32-bit masks.
+  function rotatedPatch(d=5){
+    if(![3,5].includes(d))throw new Error('Supported rotated patch sizes are 3 and 5.');
+    const labels=Array.from({length:d*d},(_,i)=>`${1+Math.floor(i/d)}${1+i%d}`),checks=[];
+    function add(type,r,c,qubits,side=''){
+      const index=checks.filter(s=>s.type===type).length;
+      checks.push({type,index,id:type+(index+1),r,c,qubits,mask:mask(qubits),side,cx:c+.5,cy:r+.5});
+    }
+    for(let r=0;r<d-1;r++)for(let c=0;c<d-1;c++)add((r+c)%2?'X':'Z',r,c,[r*d+c,r*d+c+1,(r+1)*d+c,(r+1)*d+c+1]);
+    for(let c=0;c<d-1;c+=2)add('X',-1,c,[c,c+1],'top');
+    for(let c=1;c<d-1;c+=2)add('X',d-1,c,[(d-1)*d+c,(d-1)*d+c+1],'bottom');
+    for(let r=0;r<d-1;r+=2)add('Z',r,d-1,[r*d+d-1,(r+1)*d+d-1],'right');
+    for(let r=1;r<d-1;r+=2)add('Z',r,-1,[r*d,(r+1)*d],'left');
+    const xs=checks.filter(s=>s.type==='X'),zs=checks.filter(s=>s.type==='Z');
+    const vertices=xs.map(s=>({id:s.id,x:s.cx,y:s.cy,check:s.index,boundary:false}));
+    const latticeEdges=labels.map((_,i)=>{
+      const incident=xs.filter(s=>s.qubits.includes(i)),ends=incident.map(s=>s.id);
+      if(ends.length===1){
+        const x=2*(i%d)-incident[0].cx,y=2*Math.floor(i/d)-incident[0].cy,id=`B:${x},${y}`;
+        if(!vertices.some(v=>v.id===id))vertices.push({id,x,y,boundary:true});
+        ends.push(id);
+      }
+      return {qubit:i,ends};
+    });
+    const faces=zs.map(s=>{
+      const x=s.cx,y=s.cy;
+      const polygon=s.side==='left'?[[x,y-1],[x+1,y],[x,y+1]]:s.side==='right'?[[x,y-1],[x,y+1],[x-1,y]]:[[x,y-1],[x+1,y],[x,y+1],[x-1,y]];
+      return {id:s.id,check:s.index,qubits:s.qubits,polygon};
+    });
+    const X=xs.map(s=>s.mask),Z=zs.map(s=>s.mask);
+    return {d,sites:labels,checks,X,Z,vertices,edges:latticeEdges,faces,
+      LX:mask(Array.from({length:d},(_,r)=>r*d)),LZ:mask(Array.from({length:d},(_,c)=>c)),
+      syndrome:(x,z)=>({X:syndrome(z,X),Z:syndrome(x,Z)})};
+  }
+  const api={sites,mask,X,Z,LX,LZ,pop,parity,syndrome,support,span,classify,decodeSyndrome,nodes,edges,boundary,frame,history,weight,matching,enumerate,hook,rotatedPatch};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.Surface=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

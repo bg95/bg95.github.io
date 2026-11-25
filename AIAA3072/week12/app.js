@@ -380,5 +380,82 @@
  bind('[data-strip-error]',el=>{stripActual=+el.dataset.stripError;mark('logical');renderStrip();});
  renderStrip();
 
+ // 03C: a single Pauli state drives both embeddings of the 25-qubit patch.
+ const large=Q.rotatedPatch(5),largePoint=(x,y)=>[130+100*x,130+100*y];
+ let largeX=1<<12,largeZ=1<<12,largeSelected=null,largeLastSite=12;
+ const largeVertices=new Map(large.vertices.map(v=>[v.id,v]));
+ const largeName=s=>checkName(s.type,s.index);
+ const largeOp=()=>large.sites.map((site,i)=>{const p=pauliAt(largeX,largeZ,i);return p==='I'?'':p+sub(site);}).filter(Boolean).join(' ')||'I';
+ const largePolygon=points=>points.map(p=>largePoint(...p).join(',')).join(' ');
+ function largeFace(s){
+  const [ax,ay]=largePoint(s.qubits[0]%5,Math.floor(s.qubits[0]/5)),[bx,by]=largePoint(s.qubits.at(-1)%5,Math.floor(s.qubits.at(-1)/5));
+  if(s.side==='top'||s.side==='bottom')return `M${ax} ${ay}Q${(ax+bx)/2} ${ay+(s.side==='top'?-100:100)} ${bx} ${by}Z`;
+  if(s.side==='left'||s.side==='right')return `M${ax} ${ay}Q${ax+(s.side==='left'?-100:100)} ${(ay+by)/2} ${bx} ${by}Z`;
+  return `M${ax} ${ay}H${bx}V${by}H${ax}Z`;
+ }
+ function largeCheck(s,view,bits){
+  const flagged=bits[s.type][s.index],selected=largeSelected===s.id;
+  let [x,y]=largePoint(s.cx,s.cy),shape;
+  const cls=`play-check ${s.type.toLowerCase()} ${flagged?'flagged':''} ${selected?'selected-check':''}`;
+  if(view==='node'){
+   if(s.side==='top')y=100;if(s.side==='bottom')y=560;
+   if(s.side==='left')x=100;if(s.side==='right')x=560;
+   shape=`<path d="${largeFace(s)}" class="${cls}"/>`;
+  }else if(s.type==='X')shape=`<circle cx="${x}" cy="${y}" r="23" class="${cls} vertex-check"/>`;
+  else{
+   shape=`<polygon points="${largePolygon(large.faces[s.index].polygon)}" class="${cls}"/>`;
+   if(s.side==='left')x+=100/3;if(s.side==='right')x-=100/3;
+  }
+  if(s.side==='left'||s.side==='right')y+=15;
+  const badgeX=x+(s.side==='left'?-23:23);
+  const badge=flagged?`<circle cx="${badgeX}" cy="${y-20}" r="10" class="play-flag-badge"/>${txt(badgeX,y-16,'1','class="play-flag-bit" text-anchor="middle"')}`:'';
+  return svgButton(`class="play-check-target" data-playground-check="${s.id}" data-syndrome="${flagged}" data-focus-key="playground-${view}-check-${s.id}" aria-pressed="${selected}"`,shape+txt(x,y+6,largeName(s),'class="play-check-label" text-anchor="middle"')+badge,`${s.type} check ${s.index+1}: syndrome bit ${flagged}, eigenvalue ${flagged?'minus':'plus'} one. Inspect its qubits.`);
+ }
+ function largeQubit(i,view){
+  const [x,y]=largePoint(i%5,Math.floor(i/5)),letter=pauliAt(largeX,largeZ,i),selected=large.checks.find(s=>s.id===largeSelected);
+  const support=selected?.qubits.includes(i),linked=largeLastSite===i;
+  let line='';
+  if(view==='edge'){
+   const [a,b]=large.edges[i].ends.map(id=>largeVertices.get(id)),[ax,ay]=largePoint(a.x,a.y),[bx,by]=largePoint(b.x,b.y);
+   line=`<path class="play-edge ${letter!=='I'?'has-error':''} ${support?'support-edge':''}" d="M${ax} ${ay}L${bx} ${by}"/><path class="play-edge-hit" d="M${ax} ${ay}L${bx} ${by}"/>`;
+  }
+  const body=line+`<circle cx="${x}" cy="${y}" r="32" class="play-qubit-hit"/>`+(linked?`<circle cx="${x}" cy="${y}" r="26" class="play-linked"/>`:'')+`<circle cx="${x}" cy="${y}" r="20" class="data-qubit play-qubit ${letter!=='I'?'error':''} ${support?'support-qubit':''}"/>`+txt(x,y+7,letter,'class="play-pauli" text-anchor="middle"')+txt(x,y+39,'q'+sub(large.sites[i]),'class="play-site-label" text-anchor="middle"');
+  return svgButton(`class="play-qubit-target" data-playground-site="${i}" data-error="${letter}" data-focus-key="playground-${view}-qubit-${i}" aria-pressed="${letter!=='I'}"`,body,`q${large.sites[i]}: ${letter}. Set ${pauliNext[letter]} next. Both drawings update.`);
+ }
+ function largeDrawing(view,bits){
+  let out='';
+  if(view==='node'){
+   out+=`<path class="boundary rough" d="M55 100V560 M605 100V560"/><path class="boundary smooth" d="M110 55H550 M110 605H550"/>`;
+   out+=large.checks.map(s=>largeCheck(s,view,bits)).join('');
+  }else{
+   out+=large.checks.filter(s=>s.type==='Z').map(s=>largeCheck(s,view,bits)).join('');
+   // Close boundary faces with unphysical segments, explicitly shown dashed.
+   large.faces.filter(f=>large.checks.find(s=>s.id===f.id).side).forEach(f=>{
+    const ends=f.polygon.filter(([x])=>x===-.5||x===4.5).map(p=>largePoint(...p));
+    out+=`<path class="play-virtual-boundary" d="M${ends[0].join(' ')}L${ends[1].join(' ')}"/>`;
+   });
+  }
+  out+=large.sites.map((_,i)=>largeQubit(i,view)).join('');
+  if(view==='edge'){
+   out+=large.checks.filter(s=>s.type==='X').map(s=>largeCheck(s,view,bits)).join('');
+   out+=large.vertices.filter(v=>v.boundary).map(v=>{const [x,y]=largePoint(v.x,v.y);return `<rect x="${x-6}" y="${y-6}" width="12" height="12" class="play-boundary-end"><title>Unmeasured rough-boundary endpoint</title></rect>`;}).join('');
+  }
+  return out+txt(330,34,'SMOOTH','class="play-boundary-label" text-anchor="middle"')+txt(330,639,'SMOOTH','class="play-boundary-label" text-anchor="middle"')+txt(26,330,'ROUGH','class="play-boundary-label" text-anchor="middle" transform="rotate(-90 26 330)"')+txt(634,330,'ROUGH','class="play-boundary-label" text-anchor="middle" transform="rotate(90 634 330)"');
+ }
+ function renderPlayground(){
+  const bits=large.syndrome(largeX,largeZ),total=[...bits.X,...bits.Z].reduce((a,b)=>a+b,0),weight=Q.pop(largeX|largeZ);
+  for(const view of ['node','edge'])$('playground-'+view).innerHTML=largeDrawing(view,bits);
+  const flags=type=>bits[type].map((bit,i)=>bit?checkName(type,i):'').filter(Boolean).join(', ')||'none';
+  const logicalX=Q.parity(largeX&large.LZ),logicalZ=Q.parity(largeZ&large.LX),logical=logicalX?(logicalZ?'Y':'X'):(logicalZ?'Z':'I');
+  const verdict=total?`${total} ${total===1?'check flags':'checks flag'}`:!weight?'All checks pass':logical!=='I'?`Zero syndrome · logical ${logical} action`:'Zero syndrome · no logical change';
+  $('playground-status').innerHTML=`<div class="play-error-summary"><strong>Current error: <span class="play-error-operator">${largeOp()}</span></strong><span>${weight} affected ${weight===1?'qubit':'qubits'} · ${verdict}</span></div><div class="play-flag-summary"><span><strong>X checks flagged:</strong> ${flags('X')}</span><span><strong>Z checks flagged:</strong> ${flags('Z')}</span></div>`;
+  const selected=large.checks.find(s=>s.id===largeSelected);
+  $('playground-inspector').innerHTML=selected?`<div class="formula">${largeName(selected)} = ${selected.qubits.map(i=>selected.type+sub(large.sites[i])).join('')}</div><span>Measured eigenvalue ${bits[selected.type][selected.index]?'−1':'+1'} → syndrome bit <strong>${bits[selected.type][selected.index]}</strong>. Its ${selected.qubits.length} qubits are highlighted in both views.</span>`:largeLastSite>=0?`<strong>q${sub(large.sites[largeLastSite])} = ${pauliAt(largeX,largeZ,largeLastSite)}</strong> is outlined in both views. Select a check to inspect its qubits.`:'Select any check in either drawing to inspect its qubits.';
+  bind('[data-playground-site]',el=>{const i=+el.dataset.playgroundSite,next=cyclePauli(largeX,largeZ,i);largeX=next.x;largeZ=next.z;largeLastSite=i;mark('chains');renderPlayground();});
+  bind('[data-playground-check]',el=>{largeSelected=el.dataset.playgroundCheck;largeLastSite=-1;mark('chains');renderPlayground();});
+ }
+ bind('[data-playground-preset]',el=>{largeX=0;largeZ=0;largeSelected=null;largeLastSite=12;switch(el.dataset.playgroundPreset){case 'center':largeX=largeZ=1<<12;break;case 'pair':largeZ=(1<<12)|(1<<13);largeLastSite=13;break;case 'logical':largeZ=large.LZ;largeLastSite=0;break;}mark('chains');renderPlayground();});
+ $('playground-clear').onclick=()=>{largeX=largeZ=0;largeSelected=null;largeLastSite=-1;renderPlayground();};
+ renderPlayground();
 
 })();
